@@ -1,5 +1,15 @@
 // Configuration
-const MOODS = ['😊', '🤔', '😫', '🤯', '🚀', '💡', '☕️', '😴'];
+const MOODS = [
+    '😊', // Heureux
+    '🚀', // Productif
+    '💡', // Inspiré
+    '🤔', // Perplexe
+    '😫', // Fatigué
+    '🤯', // Dépassé
+    '☕️', // Café needed
+    '😴'  // Endormi
+];
+
 const QUOTES = [
     "Le code est comme l'humour. Quand on doit l'expliquer, c'est mauvais.",
     "La simplicité est la sophistication suprême.",
@@ -9,12 +19,13 @@ const QUOTES = [
 ];
 
 // État de l'application
-let currentMood = 0; // Index dans MOODS
+let currentMood = 0;
 let isDarkMode = false;
 let selectedTags = new Set();
 
 // Sélecteurs DOM
 const moodDisplay = document.getElementById('current-mood');
+const moodSelector = document.getElementById('mood-selector');
 const themeToggle = document.getElementById('theme-toggle');
 const journalEntry = document.getElementById('journal-entry');
 const saveButton = document.getElementById('save-entry');
@@ -24,8 +35,39 @@ const addGoalButton = document.getElementById('add-goal');
 const goalsList = document.getElementById('goals-list');
 const quoteElement = document.getElementById('daily-quote');
 
+// Configuration du sélecteur d'humeur
+function setupMoodSelector() {
+    // Créer les options d'humeur
+    MOODS.forEach(mood => {
+        const moodOption = document.createElement('div');
+        moodOption.className = 'mood-option';
+        moodOption.textContent = mood;
+        moodOption.addEventListener('click', () => {
+            moodDisplay.textContent = mood;
+            moodSelector.classList.add('hidden');
+            currentMood = MOODS.indexOf(mood);
+            saveMoodToStorage();
+        });
+        moodSelector.appendChild(moodOption);
+    });
+
+    // Afficher le sélecteur au clic
+    moodDisplay.addEventListener('click', (e) => {
+        e.stopPropagation();
+        moodSelector.classList.toggle('hidden');
+    });
+
+    // Fermer le sélecteur en cliquant ailleurs
+    document.addEventListener('click', () => {
+        moodSelector.classList.add('hidden');
+    });
+
+    moodSelector.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+}
+
 // Gestionnaires d'événements
-moodDisplay.addEventListener('click', cycleMood);
 themeToggle.addEventListener('click', toggleTheme);
 saveButton.addEventListener('click', saveJournalEntry);
 addGoalButton.addEventListener('click', addGoal);
@@ -35,12 +77,6 @@ tagButtons.forEach(btn => {
 });
 
 // Fonctions
-function cycleMood() {
-    currentMood = (currentMood + 1) % MOODS.length;
-    moodDisplay.textContent = MOODS[currentMood];
-    saveMoodToStorage();
-}
-
 function toggleTheme() {
     isDarkMode = !isDarkMode;
     document.body.classList.toggle('dark', isDarkMode);
@@ -84,7 +120,7 @@ function addGoal() {
     if (!goalText) return;
 
     const goalElement = document.createElement('div');
-    goalElement.className = 'flex items-center gap-2 p-2 bg-gray-100 rounded';
+    goalElement.className = 'flex items-center gap-2 p-2 bg-gray-100 rounded dark:bg-gray-700 mb-2';
     goalElement.innerHTML = `
         <input type="checkbox" class="form-checkbox">
         <span>${goalText}</span>
@@ -94,7 +130,6 @@ function addGoal() {
     goalsList.appendChild(goalElement);
     goalInput.value = '';
 
-    // Event listeners pour le nouveau goal
     const checkbox = goalElement.querySelector('input');
     const deleteBtn = goalElement.querySelector('button');
     
@@ -105,6 +140,16 @@ function addGoal() {
     deleteBtn.addEventListener('click', () => {
         goalElement.remove();
     });
+
+    saveGoals();
+}
+
+function saveGoals() {
+    const goals = Array.from(goalsList.children).map(goal => ({
+        text: goal.querySelector('span').textContent,
+        completed: goal.querySelector('input').checked
+    }));
+    localStorage.setItem('goals', JSON.stringify(goals));
 }
 
 function showSaveSuccess() {
@@ -119,6 +164,44 @@ function showSaveSuccess() {
 function getJournalEntries() {
     const stored = localStorage.getItem('journalEntries');
     return stored ? JSON.parse(stored) : [];
+}
+
+function loadGoals() {
+    const savedGoals = localStorage.getItem('goals');
+    if (savedGoals) {
+        JSON.parse(savedGoals).forEach(goal => {
+            const goalElement = document.createElement('div');
+            goalElement.className = 'flex items-center gap-2 p-2 bg-gray-100 rounded dark:bg-gray-700 mb-2';
+            goalElement.innerHTML = `
+                <input type="checkbox" class="form-checkbox" ${goal.completed ? 'checked' : ''}>
+                <span>${goal.text}</span>
+                <button class="ml-auto text-red-500">&times;</button>
+            `;
+            
+            if (goal.completed) {
+                goalElement.classList.add('line-through');
+            }
+
+            goalsList.appendChild(goalElement);
+
+            const checkbox = goalElement.querySelector('input');
+            const deleteBtn = goalElement.querySelector('button');
+            
+            checkbox.addEventListener('change', () => {
+                goalElement.classList.toggle('line-through', checkbox.checked);
+                saveGoals();
+            });
+
+            deleteBtn.addEventListener('click', () => {
+                goalElement.remove();
+                saveGoals();
+            });
+        });
+    }
+}
+
+function saveMoodToStorage() {
+    localStorage.setItem('currentMood', currentMood.toString());
 }
 
 function updateQuote() {
@@ -139,6 +222,8 @@ function init() {
         moodDisplay.textContent = MOODS[currentMood];
     }
 
+    setupMoodSelector();
+    loadGoals();
     updateQuote();
 }
 
