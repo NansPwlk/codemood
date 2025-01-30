@@ -1,34 +1,57 @@
-# Application Todo-List
+# 🎭 CodeMood
 
-Une application web simple de gestion de tâches, développée comme exemple de projet Git.
+CodeMood est votre journal de bord personnel de développeur. Suivez votre humeur de codage, vos réalisations et votre progression tout en gardant une trace de vos découvertes techniques quotidiennes.
 
-## 🚀 Fonctionnalités
+## 🌟 Fonctionnalités
 
-- Création de tâches avec titre et description
-- Marquage des tâches comme complétées
-- Filtrage des tâches par statut
-- Interface responsive et moderne
+- **Suivi d'Humeur de Code** 
+  - Évaluez votre humeur de programmation quotidienne
+  - Associez des émojis à vos sessions de code
+  - Visualisez vos tendances d'humeur sur un calendrier interactif
+
+- **Statistiques de Productivité**
+  - Mesurez votre temps de codage effectif
+  - Suivez vos commits quotidiens
+  - Identifiez vos pics de productivité
+
+- **Journal Technique**
+  - Notez vos découvertes techniques
+  - Organisez vos snippets de code
+  - Marquez vos moments "Eureka!"
+
+- **Boost de Motivation**
+  - Générateur de citations de programmeurs célèbres
+  - Objectifs journaliers personnalisables
+  - Système de badges et récompenses
 
 ## 🛠️ Technologies utilisées
 
-- HTML5
-- CSS3 avec Flexbox/Grid
+- HTML5 & CSS3 (Animations et transitions)
 - JavaScript vanilla
-- Git pour le contrôle de version
+- LocalStorage pour la persistance des données
+- API GitHub pour le suivi des commits
+- Chart.js pour les visualisations
 
 ## 📋 Prérequis
 
 - Un navigateur web moderne
+- Un compte GitHub (optionnel, pour le suivi des commits)
 - Git installé localement
 
 ## 🔧 Installation
 
 1. Clonez le dépôt :
    ```bash
-   git clone https://github.com/NansPwkl/todo-app.git
+   git clone https://github.com/NansPwlk/codemood.git
    ```
 
-2. Ouvrez le fichier `index.html` dans votre navigateur
+2. Ouvrez `index.html` dans votre navigateur
+
+## 🎨 Personnalisation
+
+- Thèmes personnalisables (dark/light/matrix)
+- Palettes de couleurs adaptatives selon l'humeur
+- Tags personnalisés pour catégoriser vos journées
 
 ## 🌲 Structure des branches
 
@@ -57,3 +80,10 @@ Nous utilisons les conventions suivantes :
 ## 📜 Licence
 
 Ce projet est sous licence MIT - voir le fichier [LICENSE.md](LICENSE.md) pour plus de détails.
+
+## 🎯 Roadmap
+
+- [ ] Intégration avec l'API Spotify pour associer musique et humeur de code
+- [ ] Mode collaboratif pour les équipes de développement
+- [ ] Export des données en format JSON/CSV
+- [ ] Suggestions automatiques basées sur les patterns d'humeur
