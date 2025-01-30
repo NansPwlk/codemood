@@ -33,7 +33,7 @@ body {
     color: var(--primary-color);
 }
 
-/* Mood Emoji */
+/* Mood Emoji and Selector */
 #current-mood {
     font-size: 6rem !important;
     line-height: 1.2;
@@ -46,6 +46,31 @@ body {
 
 #current-mood:hover {
     transform: scale(1.1);
+}
+
+.mood-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    padding: 1rem;
+    margin-top: 1rem;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    animation: fadeIn 0.3s ease;
+}
+
+.mood-option {
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.mood-option:hover {
+    transform: scale(1.1);
+    background-color: #e9ecef;
 }
 
 /* Stats */
@@ -128,6 +153,11 @@ textarea {
     background-color: #15803d;
 }
 
+/* Utils */
+.hidden {
+    display: none;
+}
+
 /* Dark Mode */
 body.dark {
     background-color: var(--background-dark);
@@ -150,6 +180,26 @@ body.dark .tag-btn {
     color: var(--text-dark);
 }
 
+body.dark .mood-grid {
+    background-color: #2d3748;
+}
+
+body.dark .mood-option:hover {
+    background-color: #4a5568;
+}
+
 body.dark .stat-label {
     color: #e5e7eb;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
