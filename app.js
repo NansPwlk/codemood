@@ -1,15 +1,5 @@
 // Configuration
-const MOODS = {
-    '😊': 'Heureux',
-    '🤔': 'Perplexe',
-    '😫': 'Fatigué',
-    '🤯': 'Dépassé',
-    '🚀': 'Productif',
-    '💡': 'Inspiré',
-    '☕️': 'Café needed',
-    '😴': 'Endormi'
-};
-
+const MOODS = ['😊', '🤔', '😫', '🤯', '🚀', '💡', '☕️', '😴'];
 const QUOTES = [
     "Le code est comme l'humour. Quand on doit l'expliquer, c'est mauvais.",
     "La simplicité est la sophistication suprême.",
@@ -19,106 +9,136 @@ const QUOTES = [
 ];
 
 // État de l'application
-let currentMood = '😊';
-let darkMode = false;
-let goals = [];
-let journalEntries = [];
+let currentMood = 0; // Index dans MOODS
+let isDarkMode = false;
+let selectedTags = new Set();
 
 // Sélecteurs DOM
+const moodDisplay = document.getElementById('current-mood');
 const themeToggle = document.getElementById('theme-toggle');
-const moodPicker = document.getElementById('mood-picker');
-const currentMoodDisplay = document.getElementById('current-mood');
 const journalEntry = document.getElementById('journal-entry');
-const saveEntry = document.getElementById('save-entry');
-const tagContainer = document.getElementById('tag-container');
-const selectedTags = document.getElementById('selected-tags');
-const dailyQuote = document.getElementById('daily-quote');
+const saveButton = document.getElementById('save-entry');
+const tagButtons = document.querySelectorAll('.tag-btn');
+const goalInput = document.getElementById('new-goal');
+const addGoalButton = document.getElementById('add-goal');
+const goalsList = document.getElementById('goals-list');
+const quoteElement = document.getElementById('daily-quote');
 
 // Gestionnaires d'événements
+moodDisplay.addEventListener('click', cycleMood);
 themeToggle.addEventListener('click', toggleTheme);
-currentMoodDisplay.addEventListener('click', cycleMood);
-saveEntry.addEventListener('click', saveJournalEntry);
+saveButton.addEventListener('click', saveJournalEntry);
+addGoalButton.addEventListener('click', addGoal);
+
+tagButtons.forEach(btn => {
+    btn.addEventListener('click', () => toggleTag(btn));
+});
 
 // Fonctions
-function toggleTheme() {
-    darkMode = !darkMode;
-    document.body.classList.toggle('dark', darkMode);
-    localStorage.setItem('darkMode', darkMode);
-}
-
 function cycleMood() {
-    const moodKeys = Object.keys(MOODS);
-    const currentIndex = moodKeys.indexOf(currentMood);
-    const nextIndex = (currentIndex + 1) % moodKeys.length;
-    currentMood = moodKeys[nextIndex];
-    currentMoodDisplay.textContent = currentMood;
-    saveMood();
+    currentMood = (currentMood + 1) % MOODS.length;
+    moodDisplay.textContent = MOODS[currentMood];
+    saveMoodToStorage();
 }
 
-function saveMood() {
-    const today = new Date().toISOString().split('T')[0];
-    localStorage.setItem(`mood_${today}`, currentMood);
-    updateMoodCalendar();
+function toggleTheme() {
+    isDarkMode = !isDarkMode;
+    document.body.classList.toggle('dark', isDarkMode);
+    localStorage.setItem('darkMode', isDarkMode);
+}
+
+function toggleTag(button) {
+    button.classList.toggle('selected');
+    const tag = button.dataset.tag;
+    if (selectedTags.has(tag)) {
+        selectedTags.delete(tag);
+    } else {
+        selectedTags.add(tag);
+    }
 }
 
 function saveJournalEntry() {
+    if (!journalEntry.value.trim()) return;
+
     const entry = {
-        date: new Date().toISOString(),
         content: journalEntry.value,
-        mood: currentMood,
-        tags: Array.from(document.querySelectorAll('.tag-btn.selected')).map(tag => tag.dataset.tag)
+        mood: MOODS[currentMood],
+        tags: Array.from(selectedTags),
+        timestamp: new Date().toISOString()
     };
-    
-    journalEntries.push(entry);
-    localStorage.setItem('journalEntries', JSON.stringify(journalEntries));
+
+    const entries = getJournalEntries();
+    entries.push(entry);
+    localStorage.setItem('journalEntries', JSON.stringify(entries));
+
+    // Reset form
     journalEntry.value = '';
-    updateSelectedTags();
+    selectedTags.clear();
+    tagButtons.forEach(btn => btn.classList.remove('selected'));
+
+    showSaveSuccess();
 }
 
-function updateMoodCalendar() {
-    const calendar = document.getElementById('mood-calendar');
-    calendar.innerHTML = '';
+function addGoal() {
+    const goalText = goalInput.value.trim();
+    if (!goalText) return;
+
+    const goalElement = document.createElement('div');
+    goalElement.className = 'flex items-center gap-2 p-2 bg-gray-100 rounded';
+    goalElement.innerHTML = `
+        <input type="checkbox" class="form-checkbox">
+        <span>${goalText}</span>
+        <button class="ml-auto text-red-500">&times;</button>
+    `;
+
+    goalsList.appendChild(goalElement);
+    goalInput.value = '';
+
+    // Event listeners pour le nouveau goal
+    const checkbox = goalElement.querySelector('input');
+    const deleteBtn = goalElement.querySelector('button');
     
-    const today = new Date();
-    const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30);
-    
-    for (let date = new Date(startDate); date <= today; date.setDate(date.getDate() + 1)) {
-        const dayElement = document.createElement('div');
-        const dateStr = date.toISOString().split('T')[0];
-        const mood = localStorage.getItem(`mood_${dateStr}`);
-        
-        dayElement.className = 'day';
-        dayElement.textContent = mood || '·';
-        calendar.appendChild(dayElement);
-    }
+    checkbox.addEventListener('change', () => {
+        goalElement.classList.toggle('line-through', checkbox.checked);
+    });
+
+    deleteBtn.addEventListener('click', () => {
+        goalElement.remove();
+    });
+}
+
+function showSaveSuccess() {
+    saveButton.textContent = 'Sauvegardé ✓';
+    saveButton.disabled = true;
+    setTimeout(() => {
+        saveButton.textContent = 'Sauvegarder';
+        saveButton.disabled = false;
+    }, 2000);
+}
+
+function getJournalEntries() {
+    const stored = localStorage.getItem('journalEntries');
+    return stored ? JSON.parse(stored) : [];
 }
 
 function updateQuote() {
     const randomIndex = Math.floor(Math.random() * QUOTES.length);
-    dailyQuote.textContent = `"${QUOTES[randomIndex]}"`;
+    quoteElement.textContent = `"${QUOTES[randomIndex]}"`;
 }
 
 // Initialisation
 function init() {
     // Charger le thème
-    darkMode = localStorage.getItem('darkMode') === 'true';
-    document.body.classList.toggle('dark', darkMode);
-    
-    // Charger les entrées du journal
-    const savedEntries = localStorage.getItem('journalEntries');
-    if (savedEntries) {
-        journalEntries = JSON.parse(savedEntries);
+    isDarkMode = localStorage.getItem('darkMode') === 'true';
+    document.body.classList.toggle('dark', isDarkMode);
+
+    // Charger l'humeur
+    const savedMood = localStorage.getItem('currentMood');
+    if (savedMood !== null) {
+        currentMood = parseInt(savedMood);
+        moodDisplay.textContent = MOODS[currentMood];
     }
-    
-    // Charger l'humeur du jour
-    const today = new Date().toISOString().split('T')[0];
-    const savedMood = localStorage.getItem(`mood_${today}`);
-    if (savedMood) {
-        currentMood = savedMood;
-        currentMoodDisplay.textContent = currentMood;
-    }
-    
-    updateMoodCalendar();
+
     updateQuote();
 }
 
