@@ -1,14 +1,14 @@
 // Configuration
-const MOODS = [
-    '😊', // Heureux
-    '🚀', // Productif
-    '💡', // Inspiré
-    '🤔', // Perplexe
-    '😫', // Fatigué
-    '🤯', // Dépassé
-    '☕️', // Café needed
-    '😴'  // Endormi
-];
+const MOODS = {
+    '😊': 'Heureux',
+    '🚀': 'Productif',
+    '💡': 'Inspiré',
+    '🤔': 'Perplexe',
+    '😫': 'Fatigué',
+    '🤯': 'Dépassé',
+    '☕️': 'Besoin de café',
+    '😴': 'Endormi'
+};
 
 const QUOTES = [
     "Le code est comme l'humour. Quand on doit l'expliquer, c'est mauvais.",
@@ -19,7 +19,7 @@ const QUOTES = [
 ];
 
 // État de l'application
-let currentMood = 0;
+let currentMood = '😊'; // État par défaut
 let isDarkMode = false;
 let selectedTags = new Set();
 
@@ -37,21 +37,23 @@ const quoteElement = document.getElementById('daily-quote');
 
 // Configuration du sélecteur d'humeur
 function setupMoodSelector() {
-    // Créer les options d'humeur
-    MOODS.forEach(mood => {
+    // Créer la grille d'emojis
+    Object.entries(MOODS).forEach(([emoji, description]) => {
         const moodOption = document.createElement('div');
         moodOption.className = 'mood-option';
-        moodOption.textContent = mood;
-        moodOption.addEventListener('click', () => {
-            moodDisplay.textContent = mood;
+        moodOption.textContent = emoji;
+        moodOption.title = description; // Ajoute une infobulle avec la description
+        moodOption.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentMood = emoji;
+            moodDisplay.textContent = emoji;
             moodSelector.classList.add('hidden');
-            currentMood = MOODS.indexOf(mood);
             saveMoodToStorage();
         });
         moodSelector.appendChild(moodOption);
     });
 
-    // Afficher le sélecteur au clic
+    // Gestionnaire pour afficher/masquer le sélecteur
     moodDisplay.addEventListener('click', (e) => {
         e.stopPropagation();
         moodSelector.classList.toggle('hidden');
@@ -61,7 +63,8 @@ function setupMoodSelector() {
     document.addEventListener('click', () => {
         moodSelector.classList.add('hidden');
     });
-
+    
+    // Empêcher la fermeture en cliquant sur le sélecteur lui-même
     moodSelector.addEventListener('click', (e) => {
         e.stopPropagation();
     });
@@ -98,7 +101,7 @@ function saveJournalEntry() {
 
     const entry = {
         content: journalEntry.value,
-        mood: MOODS[currentMood],
+        mood: currentMood,
         tags: Array.from(selectedTags),
         timestamp: new Date().toISOString()
     };
@@ -135,10 +138,12 @@ function addGoal() {
     
     checkbox.addEventListener('change', () => {
         goalElement.classList.toggle('line-through', checkbox.checked);
+        saveGoals();
     });
 
     deleteBtn.addEventListener('click', () => {
         goalElement.remove();
+        saveGoals();
     });
 
     saveGoals();
@@ -201,7 +206,7 @@ function loadGoals() {
 }
 
 function saveMoodToStorage() {
-    localStorage.setItem('currentMood', currentMood.toString());
+    localStorage.setItem('currentMood', currentMood);
 }
 
 function updateQuote() {
@@ -217,9 +222,9 @@ function init() {
 
     // Charger l'humeur
     const savedMood = localStorage.getItem('currentMood');
-    if (savedMood !== null) {
-        currentMood = parseInt(savedMood);
-        moodDisplay.textContent = MOODS[currentMood];
+    if (savedMood && MOODS[savedMood]) {
+        currentMood = savedMood;
+        moodDisplay.textContent = currentMood;
     }
 
     setupMoodSelector();
