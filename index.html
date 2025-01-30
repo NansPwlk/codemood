@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeMood - Journal de Développeur</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="style.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <header class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto">
+            <h1 class="text-2xl font-bold">CodeMood</h1>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4">
+        <!-- Section Humeur -->
+        <section class="bg-white rounded-lg shadow p-4 mb-4">
+            <h2 class="text-xl font-bold mb-2">Humeur du Jour</h2>
+            <div id="mood-picker" class="text-center text-4xl">
+                😊
+            </div>
+        </section>
+
+        <!-- Section Stats -->
+        <section class="bg-white rounded-lg shadow p-4 mb-4">
+            <h2 class="text-xl font-bold mb-2">Statistiques</h2>
+            <div class="grid grid-cols-3 gap-4 text-center">
+                <div>
+                    <div class="text-2xl font-bold text-blue-600">4h</div>
+                    <div class="text-sm">Codage</div>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-green-600">12</div>
+                    <div class="text-sm">Commits</div>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-purple-600">5j</div>
+                    <div class="text-sm">Streak</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section Journal -->
+        <section class="bg-white rounded-lg shadow p-4">
+            <h2 class="text-xl font-bold mb-2">Journal</h2>
+            <textarea class="w-full p-2 border rounded" rows="4" placeholder="Notes du jour..."></textarea>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
