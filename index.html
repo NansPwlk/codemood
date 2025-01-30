@@ -7,48 +7,118 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link href="style.css" rel="stylesheet">
 </head>
-<body class="bg-gray-100">
-    <header class="bg-blue-600 text-white p-4">
-        <div class="container mx-auto">
-            <h1 class="text-2xl font-bold">CodeMood</h1>
+<body class="bg-gray-100 transition-colors duration-200">
+    <!-- Theme Toggle -->
+    <div class="fixed top-4 right-4">
+        <button id="theme-toggle" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700">
+            🌓
+        </button>
+    </div>
+
+    <header class="bg-blue-600 text-white p-6 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-3xl font-bold">CodeMood</h1>
+            <button id="github-login" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded-lg">
+                Connexion GitHub
+            </button>
         </div>
     </header>
 
-    <main class="container mx-auto p-4">
-        <!-- Section Humeur -->
-        <section class="bg-white rounded-lg shadow p-4 mb-4">
-            <h2 class="text-xl font-bold mb-2">Humeur du Jour</h2>
-            <div id="mood-picker" class="text-center text-4xl">
-                😊
+    <main class="container mx-auto p-6 space-y-6">
+        <!-- Dashboard -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Mood Section -->
+            <section class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-bold mb-4">Humeur du Jour</h2>
+                <div id="mood-picker" class="text-center">
+                    <div id="current-mood" class="text-6xl mb-4 cursor-pointer mood-emoji">😊</div>
+                    <div id="mood-calendar" class="grid grid-cols-7 gap-2 mt-4">
+                        <!-- Calendrier généré par JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Stats Section -->
+            <section class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-bold mb-4">Statistiques</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="stats-card">
+                        <canvas id="mood-chart"></canvas>
+                    </div>
+                    <div class="stats-card">
+                        <canvas id="commit-chart"></canvas>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-4 mt-4">
+                    <div class="text-center">
+                        <div id="coding-hours" class="text-2xl font-bold text-blue-600">0h</div>
+                        <div class="text-sm text-gray-600">Aujourd'hui</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="commit-count" class="text-2xl font-bold text-green-600">0</div>
+                        <div class="text-sm text-gray-600">Commits</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="streak-count" class="text-2xl font-bold text-purple-600">0j</div>
+                        <div class="text-sm text-gray-600">Streak</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Journal Section -->
+        <section class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-bold mb-4">Journal Technique</h2>
+            <div class="space-y-4">
+                <div class="flex gap-2 flex-wrap" id="tag-container">
+                    <button class="tag-btn" data-tag="bug">🐛 Bug</button>
+                    <button class="tag-btn" data-tag="feature">✨ Feature</button>
+                    <button class="tag-btn" data-tag="refactor">🔧 Refactor</button>
+                    <button class="tag-btn" data-tag="docs">📚 Docs</button>
+                    <button class="tag-btn" data-tag="eureka">💡 Eureka</button>
+                    <button id="new-tag" class="tag-btn">+ Nouveau Tag</button>
+                </div>
+                <textarea id="journal-entry" 
+                    class="w-full p-4 border rounded-lg" 
+                    rows="4" 
+                    placeholder="Notez vos découvertes techniques du jour..."></textarea>
+                <div class="flex justify-between items-center">
+                    <div id="selected-tags" class="flex gap-2 flex-wrap">
+                        <!-- Tags sélectionnés -->
+                    </div>
+                    <button id="save-entry" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        Sauvegarder
+                    </button>
+                </div>
             </div>
         </section>
 
-        <!-- Section Stats -->
-        <section class="bg-white rounded-lg shadow p-4 mb-4">
-            <h2 class="text-xl font-bold mb-2">Statistiques</h2>
-            <div class="grid grid-cols-3 gap-4 text-center">
-                <div>
-                    <div class="text-2xl font-bold text-blue-600">4h</div>
-                    <div class="text-sm">Codage</div>
+        <!-- Daily Goals Section -->
+        <section class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-bold mb-4">Objectifs du Jour</h2>
+            <div class="space-y-4">
+                <div id="goals-list" class="space-y-2">
+                    <!-- Goals generated by JS -->
                 </div>
-                <div>
-                    <div class="text-2xl font-bold text-green-600">12</div>
-                    <div class="text-sm">Commits</div>
-                </div>
-                <div>
-                    <div class="text-2xl font-bold text-purple-600">5j</div>
-                    <div class="text-sm">Streak</div>
+                <div class="flex gap-2">
+                    <input type="text" id="new-goal" placeholder="Nouvel objectif..." 
+                        class="flex-1 p-2 border rounded-lg">
+                    <button id="add-goal" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                        Ajouter
+                    </button>
                 </div>
             </div>
         </section>
 
-        <!-- Section Journal -->
-        <section class="bg-white rounded-lg shadow p-4">
-            <h2 class="text-xl font-bold mb-2">Journal</h2>
-            <textarea class="w-full p-2 border rounded" rows="4" placeholder="Notes du jour..."></textarea>
+        <!-- Quote Section -->
+        <section class="bg-white rounded-lg shadow-lg p-6">
+            <blockquote id="daily-quote" class="text-center italic text-gray-600">
+                "Le code est comme l'humour. Quand on doit l'expliquer, c'est mauvais."
+            </blockquote>
         </section>
     </main>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
