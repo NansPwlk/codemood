@@ -1,0 +1,35 @@
+/* Variables de couleurs */
+:root {
+    --primary-color: #2563eb;    /* blue-600 */
+    --success-color: #16a34a;    /* green-600 */
+    --accent-color: #9333ea;     /* purple-600 */
+}
+
+/* Animations */
+.mood-emoji {
+    transition: transform 0.2s ease;
+    cursor: pointer;
+}
+
+.mood-emoji:hover {
+    transform: scale(1.2);
+}
+
+/* Personnalisation du textarea */
+textarea {
+    resize: none;
+    transition: border-color 0.2s ease;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+    .container {
+        padding: 1rem;
+    }
+}
