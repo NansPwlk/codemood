@@ -34,14 +34,17 @@ body {
 }
 
 /* Mood Emoji and Selector */
+#mood-display {
+    position: relative;
+    display: inline-block;
+}
+
 #current-mood {
-    font-size: 6rem !important;
-    line-height: 1.2;
-    padding: 2rem;
+    font-size: 4rem;
+    padding: 1rem;
     cursor: pointer;
     user-select: none;
-    transition: transform 0.3s ease;
-    display: inline-block;
+    transition: transform 0.2s ease;
 }
 
 #current-mood:hover {
@@ -49,28 +52,35 @@ body {
 }
 
 .mood-grid {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 280px;
+    background: var(--card-bg-light);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 1rem;
+    margin-top: 0.5rem;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
-    padding: 1rem;
-    margin-top: 1rem;
-    border-radius: 8px;
-    background-color: #f8f9fa;
-    animation: fadeIn 0.3s ease;
+    gap: 0.5rem;
+    z-index: 100;
+    animation: fadeIn 0.2s ease;
 }
 
 .mood-option {
     font-size: 2rem;
-    cursor: pointer;
     padding: 0.5rem;
+    cursor: pointer;
+    text-align: center;
     border-radius: 8px;
     transition: all 0.2s ease;
-    text-align: center;
 }
 
 .mood-option:hover {
+    background-color: var(--background-light);
     transform: scale(1.1);
-    background-color: #e9ecef;
 }
 
 /* Stats */
@@ -168,6 +178,14 @@ body.dark .card {
     background-color: var(--card-bg-dark);
 }
 
+body.dark .mood-grid {
+    background-color: var(--card-bg-dark);
+}
+
+body.dark .mood-option:hover {
+    background-color: var(--background-dark);
+}
+
 body.dark textarea, 
 body.dark input[type="text"] {
     background-color: var(--card-bg-dark);
@@ -180,14 +198,6 @@ body.dark .tag-btn {
     color: var(--text-dark);
 }
 
-body.dark .mood-grid {
-    background-color: #2d3748;
-}
-
-body.dark .mood-option:hover {
-    background-color: #4a5568;
-}
-
 body.dark .stat-label {
     color: #e5e7eb;
 }
@@ -196,10 +206,10 @@ body.dark .stat-label {
 @keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateY(-10px);
+        transform: translateX(-50%) translateY(-10px);
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateX(-50%) translateY(0);
     }
 }
