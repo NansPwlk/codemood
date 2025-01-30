@@ -1,24 +1,63 @@
-/* Variables de couleurs */
+/* Variables globales */
 :root {
-    --primary-color: #2563eb;    /* blue-600 */
-    --success-color: #16a34a;    /* green-600 */
-    --accent-color: #9333ea;     /* purple-600 */
+    --primary-color: #2563eb;
+    --success-color: #16a34a;
+    --accent-color: #9333ea;
+    --background-light: #f3f4f6;
+    --background-dark: #1f2937;
+    --text-light: #374151;
+    --text-dark: #f9fafb;
+}
+
+/* Mode sombre */
+.dark {
+    background-color: var(--background-dark);
+    color: var(--text-dark);
+}
+
+.dark .bg-white {
+    background-color: #374151;
 }
 
 /* Animations */
 .mood-emoji {
     transition: transform 0.2s ease;
     cursor: pointer;
+    user-select: none;
 }
 
 .mood-emoji:hover {
     transform: scale(1.2);
 }
 
-/* Personnalisation du textarea */
+/* Cards */
+.stats-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+/* Tags */
+.tag-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    background-color: #e5e7eb;
+    transition: all 0.2s ease;
+}
+
+.tag-btn:hover {
+    background-color: #d1d5db;
+}
+
+.tag-btn.selected {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* Textarea Customization */
 textarea {
     resize: none;
-    transition: border-color 0.2s ease;
+    transition: all 0.2s ease;
 }
 
 textarea:focus {
@@ -27,9 +66,49 @@ textarea:focus {
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-/* Responsive design */
-@media (max-width: 640px) {
+/* Calendar */
+#mood-calendar .day {
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#mood-calendar .day:hover {
+    background-color: rgba(37, 99, 235, 0.1);
+}
+
+/* Goals */
+.goal-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    background-color: #f3f4f6;
+}
+
+.goal-item.completed {
+    background-color: #d1fae5;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
     .container {
         padding: 1rem;
+    }
+    
+    .grid {
+        grid-template-columns: 1fr;
+    }
+    
+    #mood-calendar .day {
+        width: 1.5rem;
+        height: 1.5rem;
+        font-size: 0.875rem;
     }
 }
