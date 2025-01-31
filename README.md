@@ -1,6 +1,7 @@
 # 🎭 CodeMood
 
 CodeMood est votre journal de bord personnel de développeur. Suivez votre humeur de codage, vos réalisations et votre progression tout en gardant une trace de vos découvertes techniques quotidiennes.
+https://nanspwlk.github.io/codemood/
 
 ## 🌟 Fonctionnalités
 
