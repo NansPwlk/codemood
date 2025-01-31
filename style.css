@@ -1,182 +1,164 @@
 /* ================================
-   CodeMood - Optimized JavaScript
-   ================================
-*/
+   CodeMood - Optimized CSS
+   ================================ */
 
-// Configuration et constantes
-const CONFIG = {
-    MAX_ENTRIES: 1000,
-    BACKUP_INTERVAL: 24 * 60 * 60 * 1000, // 24 heures
-    MAX_STORAGE_SIZE: 5 * 1024 * 1024, // 5MB
-    POMODORO_DURATION: 25 * 60, // 25 minutes
-    BREAK_DURATION: 5 * 60, // 5 minutes
-    LONG_BREAK_DURATION: 15 * 60, // 15 minutes
-    POMODOROS_BEFORE_LONG_BREAK: 4
-};
+:root {
+    --primary-color: #4763E4;
+    --primary-dark: #3951c6;
+    --background-light: #f5f7fa;
+    --background-dark: #1a1e27;
+    --text-light: #333;
+    --text-dark: #f1f1f1;
+    --border-light: #d1d5db;
+    --border-dark: #374151;
+    --transition-fast: 150ms;
+    --transition-normal: 300ms;
+}
 
-const MOODS = {
-    '😊': 'Heureux', '🚀': 'Productif', '💡': 'Inspiré',
-    '🤔': 'Perplexe', '😫': 'Fatigué', '🤯': 'Dépassé',
-    '☕️': 'Besoin de café', '😴': 'Endormi', '🎯': 'Concentré',
-    '🎉': 'Célébration', '😤': 'Frustré', '🤓': 'En apprentissage'
-};
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-const QUOTES = [
-    "Le code est comme l'humour. Quand on doit l'expliquer, c'est mauvais.",
-    "Un bon développeur est celui qui regarde des deux côtés avant de traverser une rue à sens unique.",
-    "Le code propre fait une chose, et la fait bien.",
-    "Un problème bien posé est à moitié résolu.",
-    "Le code est lu beaucoup plus souvent qu'il n'est écrit."
-];
+html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+}
 
-// Initialisation du stockage avec chiffrement léger
-class StorageManager {
-    constructor() {
-        this.storage = localStorage;
-        this.validateStorage();
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--background-light);
+    color: var(--text-light);
+    transition: background-color var(--transition-normal) ease, color var(--transition-normal) ease;
+}
+
+h1, h2, h3 {
+    font-weight: 600;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+/* === BUTTONS === */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color var(--transition-fast) ease;
+    border: none;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+}
+
+.btn-outline {
+    background: none;
+    border: 1px solid var(--border-light);
+    color: var(--primary-color);
+}
+
+.btn-outline:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* === INPUTS === */
+.input-field {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    transition: border-color var(--transition-fast) ease;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+/* === MODAL === */
+.modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity var(--transition-normal) ease;
+}
+
+.modal.active {
+    visibility: visible;
+    opacity: 1;
+}
+
+.modal-content {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: transform var(--transition-normal) ease;
+    transform: translateY(-20px);
+}
+
+.modal.active .modal-content {
+    transform: translateY(0);
+}
+
+/* === DARK MODE === */
+body.dark {
+    background-color: var(--background-dark);
+    color: var(--text-dark);
+}
+
+body.dark .btn-outline {
+    border-color: var(--border-dark);
+    color: var(--text-dark);
+}
+
+body.dark .btn-outline:hover {
+    background-color: var(--primary-dark);
+    color: white;
+}
+
+body.dark .input-field {
+    background-color: #2d343f;
+    border-color: var(--border-dark);
+    color: var(--text-dark);
+}
+
+/* === ANIMATIONS === */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
     }
-    
-    encrypt(data) {
-        return btoa(unescape(encodeURIComponent(JSON.stringify(data))));
-    }
-    
-    decrypt(data) {
-        return JSON.parse(decodeURIComponent(escape(atob(data))));
-    }
-    
-    validateStorage() {
-        ['journalEntries', 'settings'].forEach(key => {
-            if (!this.get(key)) this.set(key, key === 'settings' ? {} : []);
-        });
-    }
-    
-    set(key, value) {
-        try {
-            this.storage.setItem(key, this.encrypt(value));
-        } catch (error) {
-            console.error('Erreur de stockage:', error);
-        }
-    }
-    
-    get(key) {
-        try {
-            const item = this.storage.getItem(key);
-            return item ? this.decrypt(item) : null;
-        } catch (error) {
-            console.error('Erreur de lecture:', error);
-            return null;
-        }
+    to {
+        opacity: 1;
     }
 }
 
-const storageManager = new StorageManager();
-
-// Gestion des notifications
-class NotificationManager {
-    async notify(title, body = '') {
-        if (!('Notification' in window)) return;
-        if (Notification.permission === 'granted') {
-            new Notification(title, { body, icon: '/icon.png' });
-        } else if (Notification.permission !== 'denied') {
-            await Notification.requestPermission();
-        }
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
     }
 }
-const notificationManager = new NotificationManager();
-
-// Pomodoro Timer
-class PomodoroTimer {
-    constructor(updateCallback) {
-        this.timeLeft = CONFIG.POMODORO_DURATION;
-        this.isActive = false;
-        this.isBreak = false;
-        this.timer = null;
-        this.updateCallback = updateCallback;
-        this.pomodorosCompleted = 0;
-    }
-    
-    start() {
-        if (this.isActive) return;
-        this.isActive = true;
-        this.timer = setInterval(() => {
-            this.timeLeft--;
-            this.updateCallback(this.formatTime(), this.isBreak);
-            if (this.timeLeft <= 0) this.complete();
-        }, 1000);
-    }
-    
-    pause() {
-        clearInterval(this.timer);
-        this.isActive = false;
-    }
-    
-    reset() {
-        clearInterval(this.timer);
-        this.timeLeft = CONFIG.POMODORO_DURATION;
-        this.isActive = false;
-        this.updateCallback(this.formatTime(), false);
-    }
-    
-    complete() {
-        clearInterval(this.timer);
-        this.isActive = false;
-        this.isBreak = !this.isBreak;
-        this.timeLeft = this.isBreak ? CONFIG.BREAK_DURATION : CONFIG.POMODORO_DURATION;
-        notificationManager.notify(
-            this.isBreak ? 'Pause commencée' : 'Session terminée',
-            this.isBreak ? 'Prenez une pause' : 'Reprenez le travail!'
-        );
-        this.updateCallback(this.formatTime(), this.isBreak);
-    }
-    
-    formatTime() {
-        const minutes = Math.floor(this.timeLeft / 60);
-        const seconds = this.timeLeft % 60;
-        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-}
-const pomodoroTimer = new PomodoroTimer(updatePomodoroDisplay);
-
-// Gestion des citations
-function updateQuote() {
-    const randomQuote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
-    document.getElementById('daily-quote').textContent = `“${randomQuote}”`;
-}
-
-// Initialisation des événements
-function setupEventListeners() {
-    document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
-    document.getElementById('save-entry').addEventListener('click', saveJournalEntry);
-    document.getElementById('pomodoro-start').addEventListener('click', () => pomodoroTimer.start());
-    document.getElementById('pomodoro-pause').addEventListener('click', () => pomodoroTimer.pause());
-    document.getElementById('pomodoro-reset').addEventListener('click', () => pomodoroTimer.reset());
-}
-
-// Gestion du mode sombre
-function toggleTheme() {
-    document.body.classList.toggle('dark');
-    storageManager.set('settings', { darkMode: document.body.classList.contains('dark') });
-}
-
-// Sauvegarde du journal
-function saveJournalEntry() {
-    const content = document.getElementById('journal-entry').value.trim();
-    if (!content) return;
-    
-    const entries = storageManager.get('journalEntries');
-    entries.unshift({ id: Date.now(), content, timestamp: new Date().toISOString() });
-    storageManager.set('journalEntries', entries);
-    
-    document.getElementById('journal-entry').value = '';
-    notificationManager.notify('Entrée sauvegardée', 'Votre note a été enregistrée avec succès');
-}
-
-// Initialisation de l'application
-function init() {
-    setupEventListeners();
-    updateQuote();
-    const settings = storageManager.get('settings');
-    if (settings?.darkMode) document.body.classList.add('dark');
-}
-
-document.addEventListener('DOMContentLoaded', init);
