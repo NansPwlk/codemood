@@ -1,99 +1,101 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CodeMood - Journal de Développeur</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="style.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeMood - Journal de Développeur</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="style.css" rel="stylesheet">
 </head>
-<body class="bg-gray-100">
-    <header class="bg-primary text-white">
-        <div class="container mx-auto flex justify-between items-center px-4 py-3">
-            <h1 class="text-3xl font-bold">CodeMood</h1>
-            <div class="flex gap-4 items-center">
-                <button id="theme-toggle" class="p-2 text-xl">🌓</button>
-                <button id="github-connect" class="bg-white text-primary px-4 py-2 rounded-lg hover:bg-opacity-90">
-                    Connexion GitHub
-                </button>
-            </div>
-        </div>
-    </header>
+<body>
+  <header class="bg-primary text-white">
+    <div class="container mx-auto flex justify-between items-center px-4 py-3">
+      <h1 class="text-3xl font-bold">CodeMood</h1>
+      <div class="flex gap-4 items-center">
+        <button id="theme-toggle" class="p-2 text-xl">🌓</button>
+        <button id="github-connect" class="bg-white text-primary px-4 py-2 rounded-lg hover:bg-opacity-90">
+          Connexion GitHub
+        </button>
+      </div>
+    </div>
+  </header>
 
-    <main class="container mx-auto p-4 space-y-6">
-        <!-- Section Stats et Humeur -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Carte Humeur -->
-            <div class="card">
-                <h2 class="text-2xl font-bold mb-4">Humeur du Jour</h2>
-                <div id="mood-display" class="text-center relative">
-                    <div id="current-mood" class="mood-emoji">😊</div>
-                    <div id="mood-selector" class="mood-grid hidden"></div>
-                </div>
-            </div>
-
-            <!-- Carte GitHub Stats -->
-            <div class="card">
-                <h2 class="text-2xl font-bold mb-4">Statistiques</h2>
-                <div class="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                        <div class="stat-value text-blue-600">0h</div>
-                        <div class="stat-label">Aujourd'hui</div>
-                    </div>
-                    <div>
-                        <div id="commits-count" class="stat-value text-green-600">0</div>
-                        <div class="stat-label">Commits</div>
-                    </div>
-                    <div>
-                        <div id="streak-count" class="stat-value text-purple-600">0j</div>
-                        <div class="stat-label">Streak</div>
-                    </div>
-                </div>
-            </div>
+  <main class="container mx-auto p-4 space-y-6">
+    <!-- Section Stats et Humeur -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Carte Humeur -->
+      <div class="card">
+        <h2 class="text-2xl font-bold mb-4">Humeur du Jour</h2>
+        <div id="mood-display" class="text-center relative">
+          <div id="current-mood" class="mood-emoji">😊</div>
+          <div id="mood-selector" class="mood-grid hidden"></div>
         </div>
+      </div>
 
-        <!-- Section Journal -->
-        <div class="card">
-            <h2 class="text-2xl font-bold mb-4">Journal Technique</h2>
-            <div class="space-y-4">
-                <div class="flex flex-wrap gap-2">
-                    <button class="tag-btn" data-tag="bug">🐛 Bug</button>
-                    <button class="tag-btn" data-tag="feature">✨ Feature</button>
-                    <button class="tag-btn" data-tag="refactor">🔧 Refactor</button>
-                    <button class="tag-btn" data-tag="docs">📚 Docs</button>
-                    <button class="tag-btn" data-tag="eureka">💡 Eureka</button>
-                </div>
-                <textarea id="journal-entry" 
-                    class="w-full p-4 border rounded"
-                    placeholder="Notez vos découvertes techniques du jour..."></textarea>
-                <button id="save-entry" class="btn btn-primary">Sauvegarder</button>
-            </div>
+      <!-- Carte GitHub Stats -->
+      <div class="card">
+        <h2 class="text-2xl font-bold mb-4">Statistiques</h2>
+        <div class="grid grid-cols-3 gap-4 text-center">
+          <div>
+            <div class="stat-value text-blue-600">0h</div>
+            <div class="stat-label">Aujourd'hui</div>
+          </div>
+          <div>
+            <div id="commits-count" class="stat-value text-green-600">0</div>
+            <div class="stat-label">Commits</div>
+          </div>
+          <div>
+            <div id="streak-count" class="stat-value text-purple-600">0j</div>
+            <div class="stat-label">Streak</div>
+          </div>
         </div>
+      </div>
+    </div>
 
-        <!-- Section Objectifs -->
-        <div class="card">
-            <h2 class="text-2xl font-bold mb-4">Objectifs du Jour</h2>
-            <div class="space-y-4">
-                <div id="goals-list">
-                    <!-- Les objectifs seront ajoutés ici -->
-                </div>
-                <div class="flex gap-2">
-                    <input type="text" id="new-goal" 
-                        placeholder="Nouvel objectif..."
-                        class="flex-1 p-2 border rounded-lg">
-                    <button id="add-goal" class="btn btn-success">Ajouter</button>
-                </div>
-            </div>
+    <!-- Section Journal -->
+    <div class="card">
+      <h2 class="text-2xl font-bold mb-4">Journal Technique</h2>
+      <div class="space-y-4">
+        <div class="flex flex-wrap gap-2">
+          <button class="tag-btn" data-tag="bug">🐛 Bug</button>
+          <button class="tag-btn" data-tag="feature">✨ Feature</button>
+          <button class="tag-btn" data-tag="refactor">🔧 Refactor</button>
+          <button class="tag-btn" data-tag="docs">📚 Docs</button>
+          <button class="tag-btn" data-tag="eureka">💡 Eureka</button>
         </div>
+        <textarea id="journal-entry" 
+                  class="w-full p-4 border rounded"
+                  placeholder="Notez vos découvertes techniques du jour..."></textarea>
+        <button id="save-entry" class="btn btn-primary">Sauvegarder</button>
+        <!-- Conteneur pour afficher les entrées du journal -->
+        <div id="journal-entries" class="mt-4 space-y-4"></div>
+      </div>
+    </div>
 
-        <!-- Section Citation -->
-        <div class="card">
-            <blockquote id="daily-quote" class="text-center italic">
-                "Le code est comme l'humour. Quand on doit l'expliquer, c'est mauvais."
-            </blockquote>
+    <!-- Section Objectifs -->
+    <div class="card">
+      <h2 class="text-2xl font-bold mb-4">Objectifs du Jour</h2>
+      <div class="space-y-4">
+        <div id="goals-list">
+          <!-- Les objectifs seront ajoutés ici -->
         </div>
-    </main>
-    <script src="app.js"></script>
+        <div class="flex gap-2">
+          <input type="text" id="new-goal" 
+                 placeholder="Nouvel objectif..."
+                 class="flex-1 p-2 border rounded-lg">
+          <button id="add-goal" class="btn btn-success">Ajouter</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section Citation -->
+    <div class="card">
+      <blockquote id="daily-quote" class="text-center italic">
+        "Le code est comme l'humour. Quand on doit l'expliquer, c'est mauvais."
+      </blockquote>
+    </div>
+  </main>
+  <script src="app.js"></script>
 </body>
 </html>
