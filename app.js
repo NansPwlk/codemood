@@ -6,7 +6,19 @@ const CONFIG = {
     POMODORO_DURATION: 25 * 60, // 25 minutes
     BREAK_DURATION: 5 * 60, // 5 minutes
     LONG_BREAK_DURATION: 15 * 60, // 15 minutes
-    POMODOROS_BEFORE_LONG_BREAK: 4
+    POMODOROS_BEFORE_LONG_BREAK: 4,
+    AUTO_SAVE_INTERVAL: 30000, // 30 secondes
+    MAX_SEARCH_RESULTS: 100,
+    TAGS_COLORS: {
+        'bug': 'red',
+        'feature': 'green',
+        'refactor': 'blue',
+        'docs': 'purple',
+        'eureka': 'yellow',
+        'learn': 'indigo',
+        'idea': 'orange',
+        'optimization': 'teal'
+    }
 };
 
 const MOODS = {
@@ -39,6 +51,54 @@ const QUOTES = [
     "La première règle du débogage est de savoir ce que le code est censé faire."
 ];
 
+// Templates pour les entrées
+const TEMPLATES = {
+    bug: `## Description du Bug
+- **Type**: 
+- **Sévérité**: 
+- **Environnement**: 
+
+### Comportement attendu
+
+### Comportement actuel
+
+### Étapes pour reproduire
+1. 
+2. 
+3. 
+
+### Solution
+`,
+    feature: `## Nouvelle Fonctionnalité
+- **Type**: 
+- **Priorité**: 
+- **Estimation**: 
+
+### Description
+
+### Spécifications techniques
+
+### Tâches
+- [ ] 
+- [ ] 
+- [ ] 
+
+### Notes
+`,
+    refactor: `## Refactoring
+- **Portée**: 
+- **Impact**: 
+- **Risques**: 
+
+### Motivation
+
+### Changements proposés
+
+### Tests nécessaires
+`,
+    default: ``
+};
+
 // État global de l'application
 const state = {
     currentMood: '😊',
@@ -57,32 +117,70 @@ const state = {
     isEditing: false,
     currentEditId: null,
     isSaving: false,
-    lastSyncTime: null
+    lastSyncTime: null,
+    pendingChanges: [],
+    notifications: [],
+    settings: {
+        autoSave: true,
+        soundEnabled: true,
+        pushNotifications: true,
+        darkModeAuto: true,
+        pomodoroCustom: {
+            workDuration: 25,
+            shortBreak: 5,
+            longBreak: 15,
+            longBreakInterval: 4
+        }
+    }
 };
+// Classes principales de l'application
 
-// Classe pour la gestion du stockage avec chiffrement
+// Gestionnaire de stockage avec encryption
 class StorageManager {
     constructor(encryptionKey = 'default-key') {
         this.storage = localStorage;
         this.encryptionKey = encryptionKey;
         this.initBackupSystem();
         this.validateStorage();
+        this.setupAutoSave();
     }
 
-    // Méthodes de cryptage/décryptage
+    setupAutoSave() {
+        if (state.settings.autoSave) {
+            setInterval(() => this.autoSave(), CONFIG.AUTO_SAVE_INTERVAL);
+        }
+    }
+
+    autoSave() {
+        if (state.editorContent && state.editorContent !== this.getLastSavedContent()) {
+            this.saveEntry({
+                content: state.editorContent,
+                type: 'draft',
+                timestamp: new Date().toISOString()
+            });
+        }
+    }
+
+    getLastSavedContent() {
+        const drafts = this.get('drafts') || [];
+        return drafts[0]?.content || '';
+    }
+
+    // Méthodes de cryptage basique (à remplacer par une vraie encryption en production)
     encrypt(data) {
         try {
             const stringData = typeof data === 'string' ? data : JSON.stringify(data);
-            return btoa(stringData); // Version simple - à améliorer avec une vraie encryption
+            return window.btoa(stringData);
         } catch (error) {
             console.error('Erreur de cryptage:', error);
+            showNotification('Erreur', 'Erreur lors du cryptage des données', 'error');
             return null;
         }
     }
 
     decrypt(data) {
         try {
-            const decrypted = atob(data); // Version simple - à améliorer avec une vraie decryption
+            const decrypted = window.atob(data);
             return JSON.parse(decrypted);
         } catch (error) {
             console.error('Erreur de décryptage:', error);
@@ -90,15 +188,60 @@ class StorageManager {
         }
     }
 
+    set(key, value) {
+        try {
+            const serialized = this.encrypt(value);
+            if (this.getStorageSize() + serialized.length > CONFIG.MAX_STORAGE_SIZE) {
+                this.cleanOldEntries();
+            }
+            this.storage.setItem(key, serialized);
+            return true;
+        } catch (error) {
+            console.error('Erreur de stockage:', error);
+            showNotification('Erreur', 'Erreur lors de la sauvegarde', 'error');
+            return false;
+        }
+    }
+
+    get(key) {
+        try {
+            const item = this.storage.getItem(key);
+            return item ? this.decrypt(item) : null;
+        } catch (error) {
+            console.error('Erreur de lecture:', error);
+            return null;
+        }
+    }
+
+    getStorageSize() {
+        let size = 0;
+        for (let key in this.storage) {
+            if (this.storage.hasOwnProperty(key)) {
+                size += this.storage.getItem(key).length;
+            }
+        }
+        return size;
+    }
+
     validateStorage() {
         try {
-            const keys = ['journalEntries', 'goals', 'settings'];
-            keys.forEach(key => {
-                const data = this.get(key);
-                if (data === null) {
+            const requiredKeys = ['journalEntries', 'goals', 'settings', 'drafts'];
+            requiredKeys.forEach(key => {
+                if (this.get(key) === null) {
                     this.set(key, []);
                 }
             });
+
+            // Validation des données existantes
+            const entries = this.get('journalEntries');
+            if (entries && Array.isArray(entries)) {
+                const validEntries = entries.filter(entry => 
+                    entry && entry.id && entry.content && entry.timestamp
+                );
+                if (validEntries.length !== entries.length) {
+                    this.set('journalEntries', validEntries);
+                }
+            }
         } catch (error) {
             console.error('Erreur de validation du stockage:', error);
             this.clearCorruptedData();
@@ -127,43 +270,9 @@ class StorageManager {
         }
     }
 
-    set(key, value) {
-        try {
-            const serialized = this.encrypt(value);
-            if (this.getStorageSize() + serialized.length > CONFIG.MAX_STORAGE_SIZE) {
-                this.cleanOldEntries();
-            }
-            this.storage.setItem(key, serialized);
-            return true;
-        } catch (error) {
-            console.error('Erreur de stockage:', error);
-            return false;
-        }
-    }
-
-    get(key) {
-        try {
-            const item = this.storage.getItem(key);
-            return item ? this.decrypt(item) : null;
-        } catch (error) {
-            console.error('Erreur de lecture:', error);
-            return null;
-        }
-    }
-    // Suite de la classe StorageManager
-    getStorageSize() {
-        let size = 0;
-        for (let key in this.storage) {
-            if (this.storage.hasOwnProperty(key)) {
-                size += this.storage.getItem(key).length;
-            }
-        }
-        return size;
-    }
-
     cleanOldEntries() {
+        // Nettoyage des entrées du journal
         const entries = this.get('journalEntries') || [];
-        // Garder seulement les 1000 entrées les plus récentes
         const sortedEntries = entries.sort((a, b) => 
             new Date(b.timestamp) - new Date(a.timestamp)
         );
@@ -173,17 +282,34 @@ class StorageManager {
             this.set('journalEntries', sortedEntries);
         }
 
-        // Nettoyer les vieux objectifs complétés
+        // Nettoyage des brouillons
+        const drafts = this.get('drafts') || [];
+        const recentDrafts = drafts.slice(0, 10); // Garde les 10 derniers brouillons
+        this.set('drafts', recentDrafts);
+
+        // Nettoyage des objectifs complétés
         const goals = this.get('goals') || [];
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        const filteredGoals = goals.filter(goal => 
+        const activeGoals = goals.filter(goal => 
             !goal.completed || 
             new Date(goal.completedAt) > thirtyDaysAgo
         );
         
-        this.set('goals', filteredGoals);
+        this.set('goals', activeGoals);
+    }
+
+    initBackupSystem() {
+        setInterval(() => {
+            const lastBackup = this.get('lastBackup');
+            const now = Date.now();
+            
+            if (!lastBackup || (now - lastBackup > CONFIG.BACKUP_INTERVAL)) {
+                this.exportData();
+                this.set('lastBackup', now);
+            }
+        }, CONFIG.BACKUP_INTERVAL);
     }
 
     async exportData() {
@@ -193,11 +319,8 @@ class StorageManager {
                 timestamp: new Date().toISOString(),
                 entries: this.get('journalEntries'),
                 goals: this.get('goals'),
-                settings: {
-                    darkMode: this.get('darkMode'),
-                    currentMood: this.get('currentMood'),
-                    preferences: this.get('preferences')
-                }
+                settings: this.get('settings'),
+                stats: this.get('stats')
             };
 
             const blob = new Blob([JSON.stringify(data, null, 2)], 
@@ -210,12 +333,11 @@ class StorageManager {
             a.click();
             
             URL.revokeObjectURL(url);
-            
-            // Enregistrer le moment de la dernière sauvegarde
-            this.set('lastBackup', Date.now());
+            showNotification('Succès', 'Données exportées avec succès');
             return true;
         } catch (error) {
             console.error('Erreur lors de l\'export:', error);
+            showNotification('Erreur', 'Erreur lors de l\'export des données', 'error');
             return false;
         }
     }
@@ -225,29 +347,27 @@ class StorageManager {
             const text = await file.text();
             const data = JSON.parse(text);
             
-            // Validation de la structure des données
             if (!this.validateImportData(data)) {
                 throw new Error('Format de données invalide');
             }
 
-            // Fusion avec les données existantes
             await this.mergeImportedData(data);
-
+            showNotification('Succès', 'Données importées avec succès');
             return true;
         } catch (error) {
             console.error('Erreur d\'import:', error);
+            showNotification('Erreur', 'Erreur lors de l\'import des données', 'error');
             return false;
         }
     }
-
+    // Suite de la classe StorageManager
     validateImportData(data) {
-        // Vérification de la version
+        // Vérification de la version et du timestamp
         if (!data.version || !data.timestamp) return false;
 
-        // Vérification de la structure des entrées
+        // Vérification des entrées
         if (!Array.isArray(data.entries)) return false;
         
-        // Vérification de chaque entrée
         const validEntry = entry => 
             entry.id && 
             entry.content && 
@@ -258,63 +378,97 @@ class StorageManager {
     }
 
     async mergeImportedData(importedData) {
-        // Récupération des données existantes
+        // Fusion des entrées
         const existingEntries = this.get('journalEntries') || [];
-        const existingGoals = this.get('goals') || [];
-
-        // Fusion des entrées en évitant les doublons
         const mergedEntries = [...existingEntries];
-        for (const importedEntry of importedData.entries) {
-            if (!mergedEntries.some(e => e.id === importedEntry.id)) {
+        
+        importedData.entries.forEach(importedEntry => {
+            const existingIndex = mergedEntries.findIndex(e => e.id === importedEntry.id);
+            if (existingIndex === -1) {
                 mergedEntries.push(importedEntry);
+            } else if (new Date(importedEntry.timestamp) > new Date(mergedEntries[existingIndex].timestamp)) {
+                mergedEntries[existingIndex] = importedEntry;
             }
-        }
+        });
 
         // Tri par date
-        mergedEntries.sort((a, b) => 
-            new Date(b.timestamp) - new Date(a.timestamp)
-        );
+        mergedEntries.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
         // Fusion des objectifs
+        const existingGoals = this.get('goals') || [];
         const mergedGoals = [...existingGoals];
         if (importedData.goals) {
-            for (const importedGoal of importedData.goals) {
+            importedData.goals.forEach(importedGoal => {
                 if (!mergedGoals.some(g => g.id === importedGoal.id)) {
                     mergedGoals.push(importedGoal);
                 }
-            }
+            });
         }
+
+        // Fusion des paramètres
+        const existingSettings = this.get('settings') || {};
+        const mergedSettings = {
+            ...existingSettings,
+            ...importedData.settings
+        };
 
         // Sauvegarde des données fusionnées
         this.set('journalEntries', mergedEntries);
         this.set('goals', mergedGoals);
+        this.set('settings', mergedSettings);
 
-        // Import des préférences si elles existent
-        if (importedData.settings) {
-            this.set('preferences', {
-                ...this.get('preferences'),
-                ...importedData.settings.preferences
-            });
-        }
+        // Mise à jour des statistiques
+        await this.updateStats();
     }
 
-    initBackupSystem() {
-        setInterval(() => {
-            const lastBackup = this.get('lastBackup');
-            const now = Date.now();
-            
-            if (!lastBackup || (now - lastBackup > CONFIG.BACKUP_INTERVAL)) {
-                this.exportData();
-            }
-        }, CONFIG.BACKUP_INTERVAL);
+    async updateStats() {
+        const entries = this.get('journalEntries') || [];
+        const stats = {
+            totalEntries: entries.length,
+            wordCount: entries.reduce((acc, entry) => 
+                acc + entry.content.split(/\s+/).length, 0
+            ),
+            tagDistribution: {},
+            moodDistribution: {},
+            timeDistribution: this.calculateTimeDistribution(entries)
+        };
+
+        // Distribution des tags
+        entries.forEach(entry => {
+            entry.tags.forEach(tag => {
+                stats.tagDistribution[tag] = (stats.tagDistribution[tag] || 0) + 1;
+            });
+            stats.moodDistribution[entry.mood] = (stats.moodDistribution[entry.mood] || 0) + 1;
+        });
+
+        this.set('stats', stats);
+        return stats;
+    }
+
+    calculateTimeDistribution(entries) {
+        const distribution = {
+            hourly: new Array(24).fill(0),
+            daily: new Array(7).fill(0),
+            monthly: new Array(12).fill(0)
+        };
+
+        entries.forEach(entry => {
+            const date = new Date(entry.timestamp);
+            distribution.hourly[date.getHours()]++;
+            distribution.daily[date.getDay()]++;
+            distribution.monthly[date.getMonth()]++;
+        });
+
+        return distribution;
     }
 }
 
-// Classe pour la gestion des notifications
+// Gestionnaire de notifications
 class NotificationManager {
     constructor() {
         this.hasPermission = false;
         this.notificationQueue = [];
+        this.audio = new Audio('notification.mp3');
         this.init();
     }
 
@@ -330,6 +484,10 @@ class NotificationManager {
     }
 
     async notify(title, options = {}) {
+        if (!state.settings.soundEnabled && !state.settings.pushNotifications) {
+            return;
+        }
+
         const notification = {
             title,
             options: {
@@ -340,8 +498,12 @@ class NotificationManager {
             }
         };
 
-        if (!this.hasPermission) {
-            this.notificationQueue.push(notification);
+        if (state.settings.soundEnabled) {
+            this.audio.play().catch(() => {});
+        }
+
+        if (!state.settings.pushNotifications || !this.hasPermission) {
+            this.showInAppNotification(notification);
             return;
         }
 
@@ -361,19 +523,46 @@ class NotificationManager {
             setTimeout(() => notif.close(), 5000);
         } catch (error) {
             console.error('Erreur de notification:', error);
+            this.showInAppNotification(notification);
         }
+    }
+
+    showInAppNotification(notification) {
+        const container = document.getElementById('notifications-container');
+        const element = document.createElement('div');
+        element.className = 'notification slide-in';
+        element.innerHTML = `
+            <div class="notification-header">
+                <h4>${notification.title}</h4>
+                <button class="notification-close">&times;</button>
+            </div>
+            <p>${notification.options.body || ''}</p>
+        `;
+
+        container.appendChild(element);
+
+        // Auto-suppression
+        setTimeout(() => {
+            element.classList.add('slide-out');
+            setTimeout(() => element.remove(), 300);
+        }, 5000);
+
+        // Fermeture manuelle
+        element.querySelector('.notification-close').addEventListener('click', () => {
+            element.classList.add('slide-out');
+            setTimeout(() => element.remove(), 300);
+        });
     }
 
     async processQueue() {
         while (this.notificationQueue.length > 0) {
             const notification = this.notificationQueue.shift();
             await this.notify(notification.title, notification.options);
-            // Petit délai entre les notifications
             await new Promise(resolve => setTimeout(resolve, 500));
         }
     }
 }
-// Classe pour la gestion du Pomodoro
+// Gestionnaire du Pomodoro
 class PomodoroTimer {
     constructor(updateCallback) {
         this.timeLeft = CONFIG.POMODORO_DURATION;
@@ -382,12 +571,17 @@ class PomodoroTimer {
         this.timer = null;
         this.updateCallback = updateCallback;
         this.pomodorosCompleted = 0;
+        this.startTime = null;
+        this.pausedTime = null;
+        this.totalWorkTime = 0;
+        this.totalBreakTime = 0;
     }
 
     start() {
         if (this.isActive) return;
         
         this.isActive = true;
+        this.startTime = Date.now() - (this.pausedTime || 0);
         this.timer = setInterval(() => {
             this.timeLeft--;
             
@@ -396,15 +590,19 @@ class PomodoroTimer {
             } else {
                 this.updateCallback(this.formatTime(), {
                     isBreak: this.isBreak,
-                    pomodorosCompleted: this.pomodorosCompleted
+                    pomodorosCompleted: this.pomodorosCompleted,
+                    totalWorkTime: this.totalWorkTime,
+                    totalBreakTime: this.totalBreakTime
                 });
             }
         }, 1000);
 
-        // Notification de démarrage
         notificationManager.notify(
             this.isBreak ? 'Pause démarrée' : 'Pomodoro démarré',
-            { body: `Durée: ${this.formatTime()}` }
+            { 
+                body: `Durée: ${this.formatTime()}`,
+                icon: '/pomodoro-icon.png'
+            }
         );
     }
 
@@ -413,9 +611,12 @@ class PomodoroTimer {
         
         clearInterval(this.timer);
         this.isActive = false;
+        this.pausedTime = Date.now() - this.startTime;
+        
         this.updateCallback(this.formatTime(), {
             isBreak: this.isBreak,
-            pomodorosCompleted: this.pomodorosCompleted
+            pomodorosCompleted: this.pomodorosCompleted,
+            isPaused: true
         });
     }
 
@@ -425,9 +626,13 @@ class PomodoroTimer {
         this.isActive = false;
         this.isBreak = false;
         this.pomodorosCompleted = 0;
+        this.startTime = null;
+        this.pausedTime = null;
+        
         this.updateCallback(this.formatTime(), {
-            isBreak: this.isBreak,
-            pomodorosCompleted: this.pomodorosCompleted
+            isBreak: false,
+            pomodorosCompleted: 0,
+            isReset: true
         });
     }
 
@@ -436,15 +641,16 @@ class PomodoroTimer {
         this.isActive = false;
         
         if (this.isBreak) {
+            this.totalBreakTime += CONFIG.BREAK_DURATION - this.timeLeft;
             notificationManager.notify('Break terminé!', {
                 body: 'Temps de se remettre au travail!'
             });
             this.timeLeft = CONFIG.POMODORO_DURATION;
             this.isBreak = false;
         } else {
+            this.totalWorkTime += CONFIG.POMODORO_DURATION - this.timeLeft;
             this.pomodorosCompleted++;
             
-            // Déterminer si c'est une pause longue
             const isLongBreak = this.pomodorosCompleted % CONFIG.POMODOROS_BEFORE_LONG_BREAK === 0;
             this.timeLeft = isLongBreak ? CONFIG.LONG_BREAK_DURATION : CONFIG.BREAK_DURATION;
             
@@ -452,20 +658,25 @@ class PomodoroTimer {
                 body: `Prenez une ${isLongBreak ? 'longue ' : ''}pause bien méritée.`
             });
             this.isBreak = true;
-            
-            // Sauvegarder les statistiques
             this.saveStats();
         }
         
+        this.startTime = null;
+        this.pausedTime = null;
+        
         this.updateCallback(this.formatTime(), {
             isBreak: this.isBreak,
-            pomodorosCompleted: this.pomodorosCompleted
+            pomodorosCompleted: this.pomodorosCompleted,
+            totalWorkTime: this.totalWorkTime,
+            totalBreakTime: this.totalBreakTime
         });
     }
 
     saveStats() {
         const stats = storageManager.get('pomodoroStats') || {
             totalCompleted: 0,
+            totalWorkTime: 0,
+            totalBreakTime: 0,
             dailyStats: {},
             weeklyStats: {},
             monthlyStats: {}
@@ -477,6 +688,8 @@ class PomodoroTimer {
 
         // Mise à jour des statistiques
         stats.totalCompleted++;
+        stats.totalWorkTime = (stats.totalWorkTime || 0) + this.totalWorkTime;
+        stats.totalBreakTime = (stats.totalBreakTime || 0) + this.totalBreakTime;
         stats.dailyStats[today] = (stats.dailyStats[today] || 0) + 1;
         stats.weeklyStats[week] = (stats.weeklyStats[week] || 0) + 1;
         stats.monthlyStats[month] = (stats.monthlyStats[month] || 0) + 1;
@@ -496,26 +709,35 @@ class PomodoroTimer {
         const seconds = this.timeLeft % 60;
         return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
+
+    formatDuration(duration) {
+        const hours = Math.floor(duration / 3600);
+        const minutes = Math.floor((duration % 3600) / 60);
+        return `${hours}h ${minutes}m`;
+    }
 }
 
-// Classe pour la gestion de GitHub
+// Gestionnaire GitHub
 class GitHubManager {
     constructor(token = null) {
         this.token = token;
         this.baseUrl = 'https://api.github.com';
         this.rateLimitRemaining = null;
         this.rateLimitReset = null;
+        this.cache = new Map();
+        this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
     }
 
     async setToken(token) {
         this.token = token;
+        this.cache.clear();
         return this.validateToken();
     }
 
     async validateToken() {
         try {
-            const response = await this.fetchGitHub('/user');
-            return !!response.login;
+            const user = await this.fetchGitHub('/user');
+            return !!user.login;
         } catch (error) {
             console.error('Token GitHub invalide:', error);
             return false;
@@ -523,7 +745,16 @@ class GitHubManager {
     }
 
     async fetchGitHub(endpoint, options = {}) {
-        if (!this.token) throw new Error('Token GitHub non défini');
+        if (!this.token) {
+            throw new Error('Token GitHub non défini');
+        }
+
+        // Vérifier le cache
+        const cacheKey = `${endpoint}${JSON.stringify(options)}`;
+        const cached = this.cache.get(cacheKey);
+        if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
+            return cached.data;
+        }
 
         // Vérifier la limite de taux
         if (this.rateLimitRemaining === 0) {
@@ -550,16 +781,26 @@ class GitHubManager {
             throw new Error(`Erreur GitHub: ${response.statusText}`);
         }
 
-        return response.json();
-    }
+        const data = await response.json();
+        
+        // Mettre en cache
+        this.cache.set(cacheKey, {
+            data,
+            timestamp: Date.now()
+        });
 
+        return data;
+    }
+    // Suite de la classe GitHubManager
     async getStats() {
         try {
-            const user = await this.fetchGitHub('/user');
-            const events = await this.fetchGitHub(`/users/${user.login}/events`);
-            const repositories = await this.fetchGitHub('/user/repos?per_page=100');
+            const [user, events, repositories] = await Promise.all([
+                this.fetchGitHub('/user'),
+                this.fetchGitHub(`/users/${user.login}/events`),
+                this.fetchGitHub('/user/repos?per_page=100&sort=updated')
+            ]);
 
-            // Statistiques quotidiennes
+            // Stats quotidiennes
             const today = new Date();
             const todayEvents = events.filter(event => {
                 const eventDate = new Date(event.created_at);
@@ -569,7 +810,7 @@ class GitHubManager {
             // Analyse des langages
             const languages = await this.analyzeLanguages(repositories);
 
-            return {
+            const stats = {
                 user: {
                     name: user.name,
                     login: user.login,
@@ -586,41 +827,46 @@ class GitHubManager {
                     total: repositories.length,
                     stars: repositories.reduce((acc, repo) => acc + repo.stargazers_count, 0),
                     forks: repositories.reduce((acc, repo) => acc + repo.forks_count, 0),
-                    languages: languages
-                }
+                    languages: languages,
+                    top: this.getTopRepositories(repositories)
+                },
+                activity: this.processActivityData(events)
             };
+
+            return stats;
         } catch (error) {
             console.error('Erreur de récupération des stats GitHub:', error);
             return null;
         }
     }
-    // Suite de la classe GitHubManager
-    async calculateStreak(events) {
-        const dates = new Set();
-        const today = new Date().toDateString();
-        let currentDate = new Date();
-        let streak = 0;
+
+    getTopRepositories(repositories) {
+        return repositories
+            .sort((a, b) => b.stargazers_count - a.stargazers_count)
+            .slice(0, 5)
+            .map(repo => ({
+                name: repo.name,
+                stars: repo.stargazers_count,
+                forks: repo.forks_count,
+                url: repo.html_url,
+                language: repo.language,
+                description: repo.description
+            }));
+    }
+
+    processActivityData(events) {
+        const activityData = new Array(30).fill(0);
+        const today = new Date();
         
-        // Créer un set de toutes les dates avec des commits
         events.forEach(event => {
-            if (event.type === 'PushEvent') {
-                const date = new Date(event.created_at).toDateString();
-                dates.add(date);
+            const eventDate = new Date(event.created_at);
+            const daysDiff = Math.floor((today - eventDate) / (1000 * 60 * 60 * 24));
+            if (daysDiff < 30) {
+                activityData[daysDiff]++;
             }
         });
 
-        // Vérifier si aujourd'hui a des commits
-        if (!dates.has(today)) {
-            currentDate.setDate(currentDate.getDate() - 1);
-        }
-
-        // Compter les jours consécutifs
-        while (dates.has(currentDate.toDateString())) {
-            streak++;
-            currentDate.setDate(currentDate.getDate() - 1);
-        }
-
-        return streak;
+        return activityData.reverse();
     }
 
     async analyzeLanguages(repositories) {
@@ -636,7 +882,6 @@ class GitHubManager {
             });
         });
 
-        // Convertir en pourcentages
         const total = Object.values(languages).reduce((a, b) => a + b, 0);
         const percentages = {};
         Object.entries(languages).forEach(([lang, bytes]) => {
@@ -644,6 +889,33 @@ class GitHubManager {
         });
 
         return percentages;
+    }
+
+    async calculateStreak(events) {
+        const dates = new Set();
+        const today = new Date().toDateString();
+        let currentDate = new Date();
+        let streak = 0;
+        
+        events.forEach(event => {
+            if (event.type === 'PushEvent') {
+                const date = new Date(event.created_at).toDateString();
+                dates.add(date);
+            }
+        });
+
+        // Vérifier aujourd'hui
+        if (!dates.has(today)) {
+            currentDate.setDate(currentDate.getDate() - 1);
+        }
+
+        // Compter les jours consécutifs
+        while (dates.has(currentDate.toDateString())) {
+            streak++;
+            currentDate.setDate(currentDate.getDate() - 1);
+        }
+
+        return streak;
     }
 
     async getContributions() {
@@ -699,6 +971,7 @@ class EditorManager {
         this.historyIndex = -1;
         this.isPreviewMode = false;
         this.unsavedChanges = false;
+        this.lastCursorPosition = null;
 
         this.init();
     }
@@ -707,6 +980,7 @@ class EditorManager {
         this.setupEventListeners();
         this.setupAutoSave();
         this.loadDrafts();
+        this.setupMarkdownSupport();
     }
 
     setupEventListeners() {
@@ -716,16 +990,11 @@ class EditorManager {
             this.updateCharCount();
             this.unsavedChanges = true;
             this.saveState();
+            this.lastCursorPosition = editor.selectionStart;
         });
 
-        editor.addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-                e.preventDefault();
-                if (e.shiftKey) this.redo();
-                else this.undo();
-            }
-        });
-
+        editor.addEventListener('keydown', this.handleKeyDown.bind(this));
+        
         previewButton?.addEventListener('click', () => this.togglePreview());
 
         formatButtons?.forEach(btn => {
@@ -734,6 +1003,105 @@ class EditorManager {
                 this.applyFormat(format);
             });
         });
+
+        // Support du drag and drop
+        editor.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            editor.classList.add('dragover');
+        });
+
+        editor.addEventListener('dragleave', () => {
+            editor.classList.remove('dragover');
+        });
+
+        editor.addEventListener('drop', this.handleDrop.bind(this));
+    }
+
+    handleKeyDown(e) {
+        // Undo/Redo
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+            e.preventDefault();
+            if (e.shiftKey) {
+                this.redo();
+            } else {
+                this.undo();
+            }
+            return;
+        }
+
+        // Raccourcis de formatage
+        if (e.ctrlKey || e.metaKey) {
+            switch(e.key) {
+                case 'b':
+                    e.preventDefault();
+                    this.applyFormat('bold');
+                    break;
+                case 'i':
+                    e.preventDefault();
+                    this.applyFormat('italic');
+                    break;
+                case 'k':
+                    e.preventDefault();
+                    this.applyFormat('code');
+                    break;
+                case 'l':
+                    e.preventDefault();
+                    this.applyFormat('link');
+                    break;
+            }
+        }
+
+        // Auto-complétion des listes
+        if (e.key === 'Enter') {
+            const { value, selectionStart } = this.elements.editor;
+            const currentLine = value.substring(0, selectionStart).split('\n').pop();
+            const listMatch = currentLine.match(/^(\s*)([-*+]|\d+\.)\s/);
+            
+            if (listMatch) {
+                e.preventDefault();
+                if (currentLine.trim() === listMatch[0].trim()) {
+                    // Ligne vide, terminer la liste
+                    this.replaceSelection('\n', -listMatch[0].length);
+                } else {
+                    // Continuer la liste
+                    const prefix = listMatch[1]; // Espaces d'indentation
+                    const marker = listMatch[2];
+                    const newMarker = /^\d+/.test(marker) ? 
+                        (parseInt(marker) + 1) + '.' : 
+                        marker;
+                    this.insertText(`\n${prefix}${newMarker} `);
+                }
+            }
+        }
+    }
+    // Suite de la classe EditorManager
+    async handleDrop(e) {
+        e.preventDefault();
+        this.elements.editor.classList.remove('dragover');
+
+        const items = Array.from(e.dataTransfer.items);
+        for (const item of items) {
+            if (item.kind === 'file') {
+                const file = item.getAsFile();
+                if (file.type.startsWith('image/')) {
+                    await this.handleImageUpload(file);
+                }
+            }
+        }
+    }
+
+    async handleImageUpload(file) {
+        try {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const base64 = e.target.result;
+                this.insertText(`![${file.name}](${base64})`);
+            };
+            reader.readAsDataURL(file);
+        } catch (error) {
+            console.error('Erreur lors du chargement de l\'image:', error);
+            showNotification('Erreur', 'Impossible de charger l\'image', 'error');
+        }
     }
 
     setupAutoSave() {
@@ -747,6 +1115,51 @@ class EditorManager {
         }, this.options.autoSaveInterval);
     }
 
+    saveDraft() {
+        const content = this.elements.editor.value;
+        if (!content.trim()) return;
+
+        const drafts = storageManager.get('drafts') || [];
+        drafts.unshift({
+            id: Date.now().toString(),
+            content: content,
+            timestamp: new Date().toISOString()
+        });
+
+        // Garder seulement les 10 derniers brouillons
+        if (drafts.length > 10) drafts.length = 10;
+        
+        storageManager.set('drafts', drafts);
+    }
+
+    loadDrafts() {
+        const drafts = storageManager.get('drafts') || [];
+        if (drafts.length > 0) {
+            const lastDraft = drafts[0];
+            const timeDiff = new Date() - new Date(lastDraft.timestamp);
+            const hoursDiff = timeDiff / (1000 * 60 * 60);
+            
+            if (hoursDiff < 24) {
+                this.elements.editor.value = lastDraft.content;
+                this.updateCharCount();
+                this.saveState();
+            }
+        }
+    }
+
+    setupMarkdownSupport() {
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+            highlight: (code, lang) => {
+                if (Prism && lang && Prism.languages[lang]) {
+                    return Prism.highlight(code, Prism.languages[lang], lang);
+                }
+                return code;
+            }
+        });
+    }
+
     saveState() {
         const currentContent = this.elements.editor.value;
         
@@ -757,7 +1170,6 @@ class EditorManager {
         this.history.push(currentContent);
         this.historyIndex++;
         
-        // Limiter la taille de l'historique
         if (this.history.length > 50) {
             this.history.shift();
             this.historyIndex--;
@@ -801,25 +1213,54 @@ class EditorManager {
             case 'link':
                 insertion = `[${selectedText || 'lien'}](url)`;
                 break;
-            case 'list':
-                insertion = selectedText
-                    ? selectedText.split('\n').map(line => `- ${line}`).join('\n')
-                    : '- ';
+            case 'image':
+                insertion = `![${selectedText || 'description'}](url)`;
+                break;
+            case 'heading':
+                insertion = `## ${selectedText || 'Titre'}`;
                 break;
             case 'quote':
                 insertion = selectedText
                     ? selectedText.split('\n').map(line => `> ${line}`).join('\n')
                     : '> ';
                 break;
+            case 'list':
+                insertion = selectedText
+                    ? selectedText.split('\n').map(line => `- ${line}`).join('\n')
+                    : '- ';
+                break;
+            case 'olist':
+                insertion = selectedText
+                    ? selectedText.split('\n').map((line, i) => `${i + 1}. ${line}`).join('\n')
+                    : '1. ';
+                break;
+            case 'checklist':
+                insertion = selectedText
+                    ? selectedText.split('\n').map(line => `- [ ] ${line}`).join('\n')
+                    : '- [ ] ';
+                break;
+            case 'table':
+                insertion = `| En-tête 1 | En-tête 2 |\n|-----------|------------|\n| Contenu 1 | Contenu 2 |`;
+                break;
         }
 
-        editor.value = editor.value.substring(0, selectionStart) +
-                      insertion +
-                      editor.value.substring(selectionEnd);
-                      
+        this.insertText(insertion, selectionStart, selectionEnd);
+    }
+
+    insertText(text, start = null, end = null) {
+        const editor = this.elements.editor;
+        const selStart = start ?? editor.selectionStart;
+        const selEnd = end ?? editor.selectionEnd;
+
+        editor.value = editor.value.substring(0, selStart) +
+                      text +
+                      editor.value.substring(selEnd);
+
+        editor.focus();
+        editor.selectionStart = editor.selectionEnd = selStart + text.length;
+        
         this.updateCharCount();
         this.saveState();
-        editor.focus();
     }
 
     togglePreview() {
@@ -828,10 +1269,7 @@ class EditorManager {
         
         if (this.isPreviewMode) {
             const content = editor.value;
-            const html = marked.parse(content, { 
-                breaks: true,
-                gfm: true 
-            });
+            const html = marked.parse(content);
             previewPanel.innerHTML = this.sanitizeHtml(html);
             previewPanel.classList.remove('hidden');
             editor.classList.add('hidden');
@@ -859,45 +1297,16 @@ class EditorManager {
 
     updateCharCount() {
         const count = this.elements.editor.value.length;
-        this.elements.charCount.textContent = count;
+        this.elements.charCount.textContent = count.toLocaleString();
         
-        // Avertissement si proche de la limite
         if (count > this.options.maxLength * 0.9) {
             this.elements.charCount.classList.add('text-red-500');
         } else {
             this.elements.charCount.classList.remove('text-red-500');
         }
     }
-
-    saveDraft() {
-        const content = this.elements.editor.value;
-        if (content.trim()) {
-            localStorage.setItem('editor_draft', content);
-            localStorage.setItem('editor_draft_time', new Date().toISOString());
-        }
-    }
-
-    loadDrafts() {
-        const draft = localStorage.getItem('editor_draft');
-        const draftTime = localStorage.getItem('editor_draft_time');
-        
-        if (draft && draftTime) {
-            const timeDiff = new Date() - new Date(draftTime);
-            const hoursDiff = timeDiff / (1000 * 60 * 60);
-            
-            // Ne charger que les brouillons de moins de 24h
-            if (hoursDiff < 24) {
-                this.elements.editor.value = draft;
-                this.updateCharCount();
-                this.saveState();
-            } else {
-                // Nettoyer les vieux brouillons
-                localStorage.removeItem('editor_draft');
-                localStorage.removeItem('editor_draft_time');
-            }
-        }
-    }
 }
+
 // Initialisation des gestionnaires
 const storageManager = new StorageManager();
 const notificationManager = new NotificationManager();
@@ -911,444 +1320,15 @@ const editorManager = new EditorManager({
     formatButtons: document.querySelectorAll('.toolbar-btn')
 });
 
-// Sélecteurs DOM
-const elements = {
-    moodDisplay: document.getElementById('current-mood'),
-    moodSelector: document.getElementById('mood-selector'),
-    themeToggle: document.getElementById('theme-toggle'),
-    journalEntry: document.getElementById('journal-entry'),
-    saveButton: document.getElementById('save-entry'),
-    tagButtons: document.querySelectorAll('.tag-btn'),
-    goalInput: document.getElementById('new-goal'),
-    addGoalButton: document.getElementById('add-goal'),
-    goalsList: document.getElementById('goals-list'),
-    quoteElement: document.getElementById('daily-quote'),
-    searchInput: document.getElementById('search-input'),
-    filterButtons: document.querySelectorAll('.filter-btn'),
-    dateRangePicker: document.getElementById('date-range'),
-    pomodoroContainer: document.getElementById('pomodoro-container'),
-    exportButton: document.getElementById('export-data'),
-    importButton: document.getElementById('import-data'),
-    githubConnect: document.getElementById('github-connect'),
-    activityGraph: document.getElementById('activity-graph'),
-    shortcutsModal: document.getElementById('shortcuts-modal')
-};
-
-// Utils
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-function throttle(func, limit) {
-    let inThrottle;
-    return function(...args) {
-        if (!inThrottle) {
-            func.apply(this, args);
-            inThrottle = true;
-            setTimeout(() => inThrottle = false, limit);
-        }
-    };
-}
-
-function formatDate(date) {
-    return new Intl.DateTimeFormat('fr-FR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    }).format(date);
-}
-
-// Gestionnaires d'événements principaux
-function setupEventListeners() {
-    // Configuration du sélecteur d'humeur
-    setupMoodSelector();
-
-    // Écouteurs d'événements de base
-    elements.themeToggle.addEventListener('click', toggleTheme);
-    elements.saveButton.addEventListener('click', saveJournalEntry);
-    elements.addGoalButton.addEventListener('click', addGoal);
-    elements.tagButtons.forEach(btn => {
-        btn.addEventListener('click', () => toggleTag(btn));
-    });
-
-    // Recherche et filtrage
-    elements.searchInput.addEventListener('input', debounce(handleSearch, 300));
-    elements.filterButtons.forEach(btn => {
-        btn.addEventListener('click', () => handleFilter(btn.dataset.filter));
-    });
-    elements.dateRangePicker.addEventListener('change', handleDateRangeChange);
-
-    // Import/Export
-    elements.exportButton.addEventListener('click', () => storageManager.exportData());
-    elements.importButton.addEventListener('change', handleDataImport);
-    elements.githubConnect.addEventListener('click', handleGitHubConnect);
-
-    // Pomodoro
-    document.getElementById('pomodoro-start').addEventListener('click', () => pomodoroTimer.start());
-    document.getElementById('pomodoro-pause').addEventListener('click', () => pomodoroTimer.pause());
-    document.getElementById('pomodoro-reset').addEventListener('click', () => pomodoroTimer.reset());
-
-    // Raccourcis clavier globaux
-    document.addEventListener('keydown', handleKeyboardShortcuts);
-
-    // Gestion du mode sombre automatique
-    window.matchMedia('(prefers-color-scheme: dark)').addListener(e => {
-        if (storageManager.get('autoTheme')) {
-            setTheme(e.matches);
-        }
-    });
-
-    // Détection de la mise hors ligne
-    window.addEventListener('online', updateOnlineStatus);
-    window.addEventListener('offline', updateOnlineStatus);
-
-    // Sauvegarde avant fermeture
-    window.addEventListener('beforeunload', e => {
-        if (editorManager.unsavedChanges) {
-            e.preventDefault();
-            e.returnValue = '';
-        }
-    });
-}
-
-// Gestionnaire de raccourcis clavier
-function handleKeyboardShortcuts(event) {
-    // Raccourcis généraux
-    if (event.ctrlKey || event.metaKey) {
-        switch(event.key) {
-            case 's':
-                event.preventDefault();
-                saveJournalEntry();
-                break;
-            case 'f':
-                event.preventDefault();
-                elements.searchInput.focus();
-                break;
-            case 'k':
-                event.preventDefault();
-                elements.shortcutsModal.classList.remove('hidden');
-                break;
-            case ',':
-                event.preventDefault();
-                openSettings();
-                break;
-        }
-    }
-
-    // Fermeture des modales avec Échap
-    if (event.key === 'Escape') {
-        elements.shortcutsModal.classList.add('hidden');
-    }
-}
-
-// Gestion du thème
-function toggleTheme() {
-    const isDark = document.body.classList.toggle('dark');
-    storageManager.set('darkMode', isDark);
-    elements.themeToggle.innerHTML = isDark ? 
-        '<i class="fas fa-sun"></i>' : 
-        '<i class="fas fa-moon"></i>';
-}
-
-function setTheme(isDark) {
-    document.body.classList.toggle('dark', isDark);
-    elements.themeToggle.innerHTML = isDark ? 
-        '<i class="fas fa-sun"></i>' : 
-        '<i class="fas fa-moon"></i>';
-    storageManager.set('darkMode', isDark);
-}
-
-// Gestion de l'état en ligne/hors ligne
-function updateOnlineStatus(event) {
-    const isOnline = navigator.onlineType;
-    document.body.classList.toggle('offline', !isOnline);
-    
-    if (!isOnline) {
-        showNotification(
-            'Mode hors ligne',
-            'Les modifications seront synchronisées quand la connexion sera rétablie',
-            'warning'
-        );
-    } else {
-        synchronizeData();
-    }
-}
-
-// Synchronisation des données
-async function synchronizeData() {
-    const lastSync = storageManager.get('lastSync');
-    const pendingChanges = storageManager.get('pendingChanges') || [];
-    
-    if (pendingChanges.length > 0) {
-        showNotification(
-            'Synchronisation',
-            'Synchronisation des modifications en cours...',
-            'info'
-        );
-        
-        for (const change of pendingChanges) {
-            // Traiter les changements
-            await processChange(change);
-        }
-        
-        storageManager.set('pendingChanges', []);
-        storageManager.set('lastSync', Date.now());
-        
-        showNotification(
-            'Synchronisation terminée',
-            'Toutes les modifications ont été synchronisées',
-            'success'
-        );
-    }
-}
-
-async function processChange(change) {
-    switch(change.type) {
-        case 'entry':
-            await saveEntry(change.data);
-            break;
-        case 'goal':
-            await saveGoal(change.data);
-            break;
-        case 'settings':
-            await saveSettings(change.data);
-            break;
-    }
-}
-// Gestion des entrées du journal
-async function saveJournalEntry() {
-    const content = elements.journalEntry.value.trim();
-    if (!content) {
-        showNotification('Erreur', 'Le contenu ne peut pas être vide', 'error');
-        return;
-    }
-
-    try {
-        elements.saveButton.disabled = true;
-        elements.saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sauvegarde...';
-
-        const editId = elements.saveButton.dataset.editId;
-        const entries = storageManager.get('journalEntries') || [];
-        
-        if (editId) {
-            // Mode édition
-            const entryIndex = entries.findIndex(e => e.id === editId);
-            if (entryIndex !== -1) {
-                entries[entryIndex] = {
-                    ...entries[entryIndex],
-                    content: content,
-                    mood: state.currentMood,
-                    tags: Array.from(state.selectedTags),
-                    updatedAt: new Date().toISOString()
-                };
-            }
-            elements.saveButton.dataset.editId = '';
-            elements.saveButton.textContent = 'Sauvegarder';
-        } else {
-            // Nouvelle entrée
-            entries.unshift({
-                id: Date.now().toString(),
-                content: content,
-                mood: state.currentMood,
-                tags: Array.from(state.selectedTags),
-                timestamp: new Date().toISOString()
-            });
-        }
-        
-        await storageManager.set('journalEntries', entries);
-        
-        // Réinitialisation du formulaire
-        elements.journalEntry.value = '';
-        state.selectedTags.clear();
-        elements.tagButtons.forEach(btn => btn.classList.remove('selected'));
-        
-        // Mise à jour de l'affichage
-        handleFilter(state.currentFilter);
-        showNotification('Succès', 'Entrée sauvegardée avec succès');
-
-        // Mettre à jour les statistiques
-        updateStats();
-    } catch (error) {
-        console.error('Erreur lors de la sauvegarde:', error);
-        showNotification('Erreur', 'Erreur lors de la sauvegarde', 'error');
-    } finally {
-        elements.saveButton.disabled = false;
-        elements.saveButton.innerHTML = '<i class="fas fa-save"></i> Sauvegarder';
-    }
-}
-
-// Mise à jour des statistiques
-function updateStats() {
-    const entries = storageManager.get('journalEntries') || [];
-    const stats = {
-        total: entries.length,
-        byTag: {},
-        byMood: {},
-        byMonth: {},
-        streakDays: calculateStreak(entries)
-    };
-
-    entries.forEach(entry => {
-        // Stats par tag
-        entry.tags.forEach(tag => {
-            stats.byTag[tag] = (stats.byTag[tag] || 0) + 1;
-        });
-
-        // Stats par humeur
-        stats.byMood[entry.mood] = (stats.byMood[entry.mood] || 0) + 1;
-
-        // Stats par mois
-        const month = entry.timestamp.substring(0, 7);
-        stats.byMonth[month] = (stats.byMonth[month] || 0) + 1;
-    });
-
-    storageManager.set('stats', stats);
-    updateStatsDisplay(stats);
-}
-
-function calculateStreak(entries) {
-    if (entries.length === 0) return 0;
-
-    const dates = new Set(
-        entries.map(e => new Date(e.timestamp).toDateString())
-    );
-    let streak = 0;
-    let currentDate = new Date();
-
-    while (dates.has(currentDate.toDateString())) {
-        streak++;
-        currentDate.setDate(currentDate.getDate() - 1);
-    }
-
-    return streak;
-}
-
-// Gestion des citations
-function updateQuote() {
-    const randomIndex = Math.floor(Math.random() * QUOTES.length);
-    const quote = QUOTES[randomIndex];
-    elements.quoteElement.textContent = `"${quote}"`;
-}
-
-// Configuration initiale du sélecteur d'humeur
-function setupMoodSelector() {
-    const moodGrid = elements.moodSelector;
-    moodGrid.innerHTML = '';
-    
-    Object.entries(MOODS).forEach(([emoji, description]) => {
-        const option = document.createElement('div');
-        option.className = 'mood-option';
-        option.textContent = emoji;
-        option.title = description;
-        
-        option.addEventListener('click', e => {
-            e.stopPropagation();
-            state.currentMood = emoji;
-            elements.moodDisplay.textContent = emoji;
-            moodGrid.classList.add('hidden');
-            storageManager.set('currentMood', emoji);
-        });
-        
-        moodGrid.appendChild(option);
-    });
-
-    // Gestionnaires d'événements pour l'affichage/masquage
-    elements.moodDisplay.addEventListener('click', e => {
-        e.stopPropagation();
-        moodGrid.classList.toggle('hidden');
-    });
-
-    document.addEventListener('click', () => {
-        moodGrid.classList.add('hidden');
-    });
-}
-
-// Fonctions d'initialisation
-async function loadData() {
-    try {
-        // Chargement des entrées
-        const entries = storageManager.get('journalEntries') || [];
-        displayEntries(entries);
-
-        // Chargement des objectifs
-        loadGoals();
-
-        // Mise à jour des citations
-        updateQuote();
-
-        // Chargement des stats GitHub si connecté
-        const githubToken = storageManager.get('githubToken');
-        if (githubToken) {
-            const isValid = await githubManager.setToken(githubToken);
-            if (isValid) {
-                updateGitHubStats();
-            } else {
-                storageManager.set('githubToken', null);
-            }
-        }
-
-        // Mise à jour des statistiques
-        updateStats();
-    } catch (error) {
-        console.error('Erreur lors du chargement des données:', error);
-        showNotification('Erreur', 'Erreur lors du chargement des données', 'error');
-    }
-}
-
-// Fonction d'initialisation principale
-async function init() {
-    try {
-        // Chargement du thème
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const savedTheme = storageManager.get('darkMode');
-        const shouldBeDark = savedTheme ?? prefersDark;
-        setTheme(shouldBeDark);
-
-        // Chargement de l'humeur
-        const savedMood = storageManager.get('currentMood');
-        if (savedMood && MOODS[savedMood]) {
-            state.currentMood = savedMood;
-            elements.moodDisplay.textContent = state.currentMood;
-        }
-
-        // Configuration des composants
-        setupMoodSelector();
-        setupEventListeners();
-
-        // Chargement des données
-        await loadData();
-
-        // Vérification de la connexion
-        updateOnlineStatus();
-
-        // Nettoyage des anciennes données si nécessaire
-        await storageManager.cleanOldEntries();
-    } catch (error) {
-        console.error('Erreur d\'initialisation:', error);
-        showNotification('Erreur', 'Erreur lors de l\'initialisation', 'error');
-    }
-}
-
 // Démarrage de l'application
 document.addEventListener('DOMContentLoaded', init);
 
-// Service Worker pour le mode hors ligne
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').then(registration => {
-            console.log('ServiceWorker enregistré avec succès');
-        }).catch(error => {
-            console.error('Erreur d\'enregistrement du ServiceWorker:', error);
-        });
-    });
-}
+// Export pour utilisation dans la console de développement
+window.app = {
+    state,
+    storageManager,
+    notificationManager,
+    githubManager,
+    pomodoroTimer,
+    editorManager
+};
