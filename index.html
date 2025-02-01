@@ -3,59 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="CodeMood - Journal de développeur avec suivi d'humeur et productivité">
-    <meta name="theme-color" content="#4763E4">
     <title>CodeMood - Journal de Développeur</title>
-    
-    <!-- Manifest et icons PWA -->
-    <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" href="/icons/icon-192.png">
-    <link rel="icon" type="image/png" href="/favicon.png">
-
-    <!-- CSS -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="style.css" rel="stylesheet">
-
-    <!-- JavaScript -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.0.0/d3.min.js"></script>
 </head>
-<body class="bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-white transition-colors duration-200">
-    <!-- Header -->
-    <header class="bg-primary text-white sticky top-0 z-50 shadow-md">
+<body class="bg-gray-100">
+    <header class="bg-primary text-white">
         <div class="container mx-auto flex justify-between items-center px-4 py-3">
-            <div class="flex items-center gap-4">
-                <h1 class="text-3xl font-bold">CodeMood</h1>
-                <span class="text-sm bg-white bg-opacity-20 px-2 py-1 rounded">Beta</span>
-            </div>
-            <div class="flex items-center gap-4">
-                <!-- Stats rapides -->
-                <div class="hidden md:flex items-center gap-4 mr-4">
-                    <div class="text-center">
-                        <div id="total-entries" class="text-xl font-bold">0</div>
-                        <div class="text-xs">Entrées</div>
-                    </div>
-                    <div class="text-center">
-                        <div id="streak-days" class="text-xl font-bold">0</div>
-                        <div class="text-xs">Jours</div>
-                    </div>
-                </div>
-
-                <!-- Boutons d'action -->
-                <button id="shortcuts-btn" class="p-2 hover:bg-white hover:bg-opacity-10 rounded-lg transition-colors" title="Raccourcis clavier">
-                    <i class="fas fa-keyboard"></i>
-                </button>
-                <button id="theme-toggle" class="p-2 hover:bg-white hover:bg-opacity-10 rounded-lg transition-colors" title="Changer le thème">
-                    <i class="fas fa-moon"></i>
-                </button>
-                <button id="settings-btn" class="p-2 hover:bg-white hover:bg-opacity-10 rounded-lg transition-colors" title="Paramètres">
-                    <i class="fas fa-cog"></i>
-                </button>
-                <button id="github-connect" class="bg-white text-primary px-4 py-2 rounded-lg hover:bg-opacity-90 flex items-center gap-2 transition-colors">
-                    <i class="fab fa-github"></i>
-                    <span class="hidden md:inline">Connexion GitHub</span>
+            <h1 class="text-3xl font-bold">CodeMood</h1>
+            <div class="flex gap-4 items-center">
+                <button id="theme-toggle" class="p-2 text-xl">🌓</button>
+                <button id="github-connect" class="bg-white text-primary px-4 py-2 rounded-lg hover:bg-opacity-90">
+                    Connexion GitHub
                 </button>
             </div>
         </div>
@@ -65,606 +25,75 @@
         <!-- Section Stats et Humeur -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Carte Humeur -->
-            <div class="card hover:shadow-lg transition-shadow">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-2xl font-bold">Humeur du Jour</h2>
-                    <div id="mood-stats" class="text-sm text-gray-500 dark:text-gray-400">
-                        Humeur la plus fréquente: <span class="font-medium">😊</span>
-                    </div>
-                </div>
+            <div class="card">
+                <h2 class="text-2xl font-bold mb-4">Humeur du Jour</h2>
                 <div id="mood-display" class="text-center relative">
-                    <div id="current-mood" class="mood-emoji hover:scale-110 transition-transform cursor-pointer">😊</div>
-                    <div id="mood-selector" class="mood-grid hidden">
-                        <!-- Les émojis seront ajoutés par JavaScript -->
-                    </div>
-                </div>
-                <div class="mt-6">
-                    <h3 class="text-lg font-semibold mb-2">Historique récent</h3>
-                    <div id="mood-history" class="flex flex-wrap justify-center gap-2">
-                        <!-- L'historique des humeurs sera ajouté ici -->
-                    </div>
-                </div>
-                <div class="mt-4 pt-4 border-t dark:border-gray-700">
-                    <div class="text-sm text-gray-500 dark:text-gray-400">
-                        <div class="flex justify-between items-center mb-2">
-                            <span>Productivité</span>
-                            <span id="productivity-score">85%</span>
-                        </div>
-                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                            <div id="productivity-bar" class="bg-primary h-2 rounded-full" style="width: 85%"></div>
-                        </div>
-                    </div>
+                    <div id="current-mood" class="mood-emoji">😊</div>
+                    <div id="mood-selector" class="mood-grid hidden"></div>
                 </div>
             </div>
 
-            <!-- Carte GitHub -->
-            <div class="card hover:shadow-lg transition-shadow">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-2xl font-bold">GitHub Stats</h2>
-                    <div class="flex items-center gap-2">
-                        <span id="last-sync" class="text-sm text-gray-500 dark:text-gray-400"></span>
-                        <button id="refresh-stats" class="text-primary hover:text-primary-dark transition-colors p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
-                    </div>
-                </div>
-                <div id="github-content" class="space-y-6">
-                    <!-- État non connecté -->
-                    <div id="github-disconnected" class="text-center py-8">
-                        <i class="fab fa-github text-6xl mb-4 text-gray-400"></i>
-                        <p class="text-gray-500 dark:text-gray-400 mb-4">Connectez-vous à GitHub pour voir vos statistiques</p>
-                        <button class="btn btn-primary">
-                            <i class="fab fa-github mr-2"></i>
-                            Se connecter
-                        </button>
-                    </div>
-
-                    <!-- État connecté (caché par défaut) -->
-                    <div id="github-connected" class="hidden">
-                        <!-- Stats rapides -->
-                        <div class="grid grid-cols-3 gap-4">
-                            <div class="stat-card">
-                                <div id="commits-today" class="stat-value text-emerald-600">0</div>
-                                <div class="stat-label">Commits</div>
-                            </div>
-                            <div class="stat-card">
-                                <div id="streak-count" class="stat-value text-violet-600">0j</div>
-                                <div class="stat-label">Streak</div>
-                            </div>
-                            <div class="stat-card">
-                                <div id="prs-count" class="stat-value text-blue-600">0</div>
-                                <div class="stat-label">Pull Requests</div>
-                            </div>
-                        </div>
-
-                        <!-- Graphique d'activité -->
-                        <div class="mt-6">
-                            <h3 class="text-lg font-semibold mb-2">Activité</h3>
-                            <div id="activity-graph" class="w-full h-32 bg-gray-50 dark:bg-gray-800 rounded-lg overflow-hidden">
-                                <!-- Le graphique sera généré par D3.js -->
-                            </div>
-                        </div>
-
-                        <!-- Top Repos -->
-                        <div class="mt-6">
-                            <h3 class="text-lg font-semibold mb-2">Top Repositories</h3>
-                            <div id="top-repos" class="space-y-2">
-                                <!-- La liste des repos sera générée par JavaScript -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Section Pomodoro -->
-        <div class="card hover:shadow-lg transition-shadow">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-2xl font-bold">Pomodoro Timer</h2>
-                <div class="flex items-center gap-4">
-                    <div class="text-sm text-gray-500 dark:text-gray-400">
-                        <span id="pomodoro-count" class="font-medium">0</span> sessions aujourd'hui
-                    </div>
-                    <button id="pomodoro-settings" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-                        <i class="fas fa-cog"></i>
-                    </button>
-                </div>
-            </div>
-            <div id="pomodoro-container" class="text-center">
-                <div class="grid grid-cols-3 gap-4 mb-6">
-                    <div class="text-center">
-                        <div class="text-sm text-gray-500 dark:text-gray-400">Focus</div>
-                        <div id="focus-time" class="text-lg font-medium">0h 0m</div>
-                    </div>
-                    <div class="text-center">
-                        <div id="pomodoro-time" class="text-6xl font-mono font-bold mb-2">25:00</div>
-                        <div id="pomodoro-label" class="text-sm text-gray-500 dark:text-gray-400">Travail</div>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-sm text-gray-500 dark:text-gray-400">Pauses</div>
-                        <div id="break-time" class="text-lg font-medium">0h 0m</div>
-                    </div>
-                </div>
-
-                <div class="pomodoro-controls flex justify-center gap-4 mb-6">
-                    <button id="pomodoro-start" class="btn btn-primary flex items-center">
-                        <i class="fas fa-play mr-2"></i>
-                        Démarrer
-                    </button>
-                    <button id="pomodoro-pause" class="btn btn-warning flex items-center" disabled>
-                        <i class="fas fa-pause mr-2"></i>
-                        Pause
-                    </button>
-                    <button id="pomodoro-reset" class="btn btn-danger flex items-center">
-                        <i class="fas fa-redo mr-2"></i>
-                        Réinitialiser
-                    </button>
-                </div>
-
-                <div class="flex justify-center gap-8 text-sm text-gray-500 dark:text-gray-400">
+            <!-- Carte GitHub Stats -->
+            <div class="card">
+                <h2 class="text-2xl font-bold mb-4">Statistiques</h2>
+                <div class="grid grid-cols-3 gap-4 text-center">
                     <div>
-                        Prochain: <span id="pomodoro-next" class="font-medium">Pause courte</span>
+                        <div class="stat-value text-blue-600">0h</div>
+                        <div class="stat-label">Aujourd'hui</div>
                     </div>
                     <div>
-                        Cycle: <span id="pomodoro-cycle" class="font-medium">1/4</span>
+                        <div id="commits-count" class="stat-value text-green-600">0</div>
+                        <div class="stat-label">Commits</div>
+                    </div>
+                    <div>
+                        <div id="streak-count" class="stat-value text-purple-600">0j</div>
+                        <div class="stat-label">Streak</div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Section Journal -->
-        <div class="card hover:shadow-lg transition-shadow">
-            <div class="flex items-center justify-between mb-6">
-                <div>
-                    <h2 class="text-2xl font-bold">Journal Technique</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Documentez vos découvertes, bugs et solutions
-                    </p>
-                </div>
-                <div class="flex items-center gap-4">
-                    <button id="stats-toggle" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" title="Voir les statistiques">
-                        <i class="fas fa-chart-bar"></i>
-                    </button>
-                    <button id="template-btn" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" title="Utiliser un template">
-                        <i class="fas fa-file-alt"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Zone des statistiques (masquée par défaut) -->
-            <div id="journal-stats" class="hidden mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="text-center">
-                        <div class="text-2xl font-bold text-primary" id="total-entries-count">0</div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400">Total entrées</div>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-2xl font-bold text-green-600" id="weekly-entries">0</div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400">Cette semaine</div>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-2xl font-bold text-violet-600" id="avg-length-stat">0</div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400">Mots en moyenne</div>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-2xl font-bold text-blue-600" id="most-productive-day">-</div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400">Jour le plus productif</div>
-                    </div>
-                </div>
-
-                <!-- Graphique des tags -->
-                <div class="mt-4">
-                    <h3 class="text-lg font-semibold mb-2">Distribution des tags</h3>
-                    <div id="tags-chart" class="h-32">
-                        <!-- Le graphique sera généré par D3.js -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Barre de recherche et filtres -->
-            <div class="space-y-4 mb-6">
-                <div class="search-bar">
-                    <div class="relative">
-                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                        <input type="text" id="search-input" 
-                            placeholder="Rechercher dans le journal..."
-                            class="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:border-transparent">
-                    </div>
-                </div>
-                <!-- Filtres et tags -->
-                <div class="flex flex-wrap gap-2">
-                    <button class="filter-btn active" data-filter="all">
-                        Tous <span class="text-xs text-gray-500 dark:text-gray-400">(0)</span>
-                    </button>
-                    <button class="filter-btn" data-filter="bug">
-                        🐛 Bugs <span class="text-xs text-gray-500 dark:text-gray-400">(0)</span>
-                    </button>
-                    <button class="filter-btn" data-filter="feature">
-                        ✨ Features <span class="text-xs text-gray-500 dark:text-gray-400">(0)</span>
-                    </button>
-                    <button class="filter-btn" data-filter="refactor">
-                        🔧 Refactor <span class="text-xs text-gray-500 dark:text-gray-400">(0)</span>
-                    </button>
-                    <button class="filter-btn" data-filter="docs">
-                        📚 Docs <span class="text-xs text-gray-500 dark:text-gray-400">(0)</span>
-                    </button>
-                    <button class="filter-btn" data-filter="eureka">
-                        💡 Eureka <span class="text-xs text-gray-500 dark:text-gray-400">(0)</span>
-                    </button>
-                    <button class="filter-btn" data-filter="learn">
-                        🎓 Apprentissage <span class="text-xs text-gray-500 dark:text-gray-400">(0)</span>
-                    </button>
-                    <button class="filter-btn" data-filter="idea">
-                        💭 Idée <span class="text-xs text-gray-500 dark:text-gray-400">(0)</span>
-                    </button>
-                    <button class="filter-btn" data-filter="optimization">
-                        ⚡ Optimisation <span class="text-xs text-gray-500 dark:text-gray-400">(0)</span>
-                    </button>
-                </div>
-
-                <!-- Sélecteur de date -->
-                <div class="flex flex-wrap gap-4">
-                    <div class="flex-1 min-w-[200px]">
-                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Du</label>
-                        <input type="date" id="date-start" 
-                            class="w-full p-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:border-transparent">
-                    </div>
-                    <div class="flex-1 min-w-[200px]">
-                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Au</label>
-                        <input type="date" id="date-end" 
-                            class="w-full p-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:border-transparent">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Zone d'édition -->
+        <div class="card">
+            <h2 class="text-2xl font-bold mb-4">Journal Technique</h2>
             <div class="space-y-4">
-                <!-- Sélection des tags -->
                 <div class="flex flex-wrap gap-2">
                     <button class="tag-btn" data-tag="bug">🐛 Bug</button>
                     <button class="tag-btn" data-tag="feature">✨ Feature</button>
                     <button class="tag-btn" data-tag="refactor">🔧 Refactor</button>
                     <button class="tag-btn" data-tag="docs">📚 Docs</button>
                     <button class="tag-btn" data-tag="eureka">💡 Eureka</button>
-                    <button class="tag-btn" data-tag="learn">🎓 Apprentissage</button>
-                    <button class="tag-btn" data-tag="idea">💭 Idée</button>
-                    <button class="tag-btn" data-tag="optimization">⚡ Optimisation</button>
-                    <button id="custom-tag-btn" class="tag-btn border-dashed">
-                        <i class="fas fa-plus mr-1"></i> Custom
-                    </button>
                 </div>
-                
-                <!-- Barre d'outils de l'éditeur -->
-                <div class="editor-toolbar flex flex-wrap gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-t border dark:border-gray-700">
-                    <div class="flex gap-2">
-                        <button class="toolbar-btn" data-format="bold" title="Gras (Ctrl+B)">
-                            <i class="fas fa-bold"></i>
-                        </button>
-                        <button class="toolbar-btn" data-format="italic" title="Italique (Ctrl+I)">
-                            <i class="fas fa-italic"></i>
-                        </button>
-                        <button class="toolbar-btn" data-format="strikethrough" title="Barré">
-                            <i class="fas fa-strikethrough"></i>
-                        </button>
-                    </div>
+                <textarea id="journal-entry" 
+                    class="w-full p-4 border rounded"
+                    placeholder="Notez vos découvertes techniques du jour..."></textarea>
+                <button id="save-entry" class="btn btn-primary">Sauvegarder</button>
+            </div>
+        </div>
 
-                    <div class="w-px h-6 bg-gray-300 dark:bg-gray-600"></div>
-
-                    <div class="flex gap-2">
-                        <button class="toolbar-btn" data-format="heading" title="Titre">
-                            <i class="fas fa-heading"></i>
-                        </button>
-                        <button class="toolbar-btn" data-format="quote" title="Citation">
-                            <i class="fas fa-quote-right"></i>
-                        </button>
-                        <button class="toolbar-btn" data-format="code" title="Code (Ctrl+K)">
-                            <i class="fas fa-code"></i>
-                        </button>
-                        <button class="toolbar-btn" data-format="codeblock" title="Bloc de code">
-                            <i class="fas fa-file-code"></i>
-                        </button>
-                    </div>
-
-                    <div class="w-px h-6 bg-gray-300 dark:bg-gray-600"></div>
-
-                    <div class="flex gap-2">
-                        <button class="toolbar-btn" data-format="ul" title="Liste à puces">
-                            <i class="fas fa-list-ul"></i>
-                        </button>
-                        <button class="toolbar-btn" data-format="ol" title="Liste numérotée">
-                            <i class="fas fa-list-ol"></i>
-                        </button>
-                        <button class="toolbar-btn" data-format="checklist" title="Liste de tâches">
-                            <i class="fas fa-tasks"></i>
-                        </button>
-                    </div>
-
-                    <div class="w-px h-6 bg-gray-300 dark:bg-gray-600"></div>
-
-                    <div class="flex gap-2">
-                        <button class="toolbar-btn" data-format="link" title="Lien (Ctrl+L)">
-                            <i class="fas fa-link"></i>
-                        </button>
-                        <button class="toolbar-btn" data-format="image" title="Image">
-                            <i class="fas fa-image"></i>
-                        </button>
-                        <button class="toolbar-btn" data-format="table" title="Tableau">
-                            <i class="fas fa-table"></i>
-                        </button>
-                    </div>
-
-                    <div class="w-px h-6 bg-gray-300 dark:bg-gray-600"></div>
-
-                    <div class="flex gap-2">
-                        <button class="toolbar-btn" data-format="preview" title="Aperçu (Ctrl+P)">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button class="toolbar-btn" data-format="help" title="Aide Markdown">
-                            <i class="fas fa-question-circle"></i>
-                        </button>
-                    </div>
+        <!-- Section Objectifs -->
+        <div class="card">
+            <h2 class="text-2xl font-bold mb-4">Objectifs du Jour</h2>
+            <div class="space-y-4">
+                <div id="goals-list">
+                    <!-- Les objectifs seront ajoutés ici -->
                 </div>
-                <!-- Zone d'édition principale -->
-                <div class="editor-container relative">
-                    <textarea id="journal-entry" 
-                        class="w-full p-4 min-h-[300px] border rounded-b dark:bg-gray-800 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:border-transparent" 
-                        placeholder="Notez vos découvertes techniques du jour...
-Supporte le Markdown pour le formatage.
-
-## Exemple de syntaxe
-- **Gras**
-- *Italique*
-- `Code inline`
-- ```javascript
-  // Bloc de code
-  function example() {
-    console.log('Hello World');
-  }
-  ```
-- [Lien](url)
-- ![Image](url)
-- > Citation
-- Liste à puces
-  * Item 1
-  * Item 2
-- Liste numérotée
-  1. Premier
-  2. Second
-- [ ] Tâche à faire
-- [x] Tâche terminée"></textarea>
-
-                    <!-- Panneau de prévisualisation (masqué par défaut) -->
-                    <div id="preview-panel" class="hidden w-full p-4 min-h-[300px] border rounded-b bg-gray-50 dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert max-w-none"></div>
-
-                    <!-- Compteur de caractères -->
-                    <div class="absolute bottom-2 right-2 text-sm text-gray-500 dark:text-gray-400">
-                        <span id="char-count">0</span> / 50000
-                    </div>
-                </div>
-
-                <!-- Barre d'actions -->
-                <div class="flex justify-between items-center mt-4">
-                    <div class="flex items-center gap-4">
-                        <div class="flex items-center">
-                            <input type="checkbox" id="auto-save" class="form-checkbox rounded text-primary">
-                            <label for="auto-save" class="ml-2 text-sm text-gray-500 dark:text-gray-400">Auto-save</label>
-                        </div>
-                        <button id="template-save" class="text-sm text-gray-500 dark:text-gray-400 hover:text-primary">
-                            <i class="fas fa-save mr-1"></i> Sauver comme template
-                        </button>
-                    </div>
-                    <div class="flex gap-2">
-                        <button id="entry-cancel" class="btn btn-outline">Annuler</button>
-                        <button id="save-entry" class="btn btn-primary flex items-center gap-2">
-                            <i class="fas fa-save"></i>
-                            <span>Sauvegarder</span>
-                        </button>
-                    </div>
+                <div class="flex gap-2">
+                    <input type="text" id="new-goal" 
+                        placeholder="Nouvel objectif..."
+                        class="flex-1 p-2 border rounded-lg">
+                    <button id="add-goal" class="btn btn-success">Ajouter</button>
                 </div>
             </div>
+        </div>
 
-            <!-- Liste des entrées -->
-            <div id="entries-container" class="mt-8 space-y-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-xl font-semibold">Entrées récentes</h3>
-                    <div class="flex items-center gap-2">
-                        <select id="sort-entries" class="form-select rounded-lg text-sm dark:bg-gray-800 dark:border-gray-700">
-                            <option value="newest">Plus récent</option>
-                            <option value="oldest">Plus ancien</option>
-                            <option value="longest">Plus long</option>
-                            <option value="shortest">Plus court</option>
-                        </select>
-                        <button id="view-mode-toggle" class="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-                            <i class="fas fa-list"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Les entrées seront ajoutées ici dynamiquement -->
-                <div id="entries-list" class="space-y-4">
-                    <!-- Template d'une entrée -->
-                    <template id="entry-template">
-                        <article class="entry-card p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                            <div class="flex items-center justify-between mb-2">
-                                <div class="flex items-center gap-2">
-                                    <span class="mood-emoji text-2xl"></span>
-                                    <time class="text-sm text-gray-500 dark:text-gray-400"></time>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <button class="entry-edit text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="entry-delete text-gray-500 hover:text-red-500">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
-                                    <button class="entry-more text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-                                        <i class="fas fa-ellipsis-v"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="entry-content prose dark:prose-invert max-w-none mb-4">
-                                <!-- Le contenu Markdown sera rendu ici -->
-                            </div>
-                            <div class="flex flex-wrap gap-2">
-                                <!-- Les tags seront ajoutés ici -->
-                            </div>
-                        </article>
-                    </template>
-                </div>
-
-                <!-- Bouton "Charger plus" -->
-                <div class="text-center mt-6">
-                    <button id="load-more" class="btn btn-outline">
-                        Charger plus d'entrées
-                    </button>
-                </div>
-            </div>
+        <!-- Section Citation -->
+        <div class="card">
+            <blockquote id="daily-quote" class="text-center italic">
+                "Le code est comme l'humour. Quand on doit l'expliquer, c'est mauvais."
+            </blockquote>
         </div>
     </main>
-
-    <!-- Modales -->
-    <!-- Modal des raccourcis clavier -->
-    <div id="shortcuts-modal" class="modal hidden">
-        <div class="modal-overlay absolute inset-0 bg-black opacity-50"></div>
-        <div class="modal-container">
-            <div class="modal-content">
-                <h3 class="text-xl font-bold mb-4">Raccourcis Clavier</h3>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="shortcuts-group">
-                        <h4 class="font-semibold mb-2">Général</h4>
-                        <div class="space-y-2">
-                            <div class="shortcut-item">
-                                <kbd>Ctrl + S</kbd>
-                                <span>Sauvegarder l'entrée</span>
-                            </div>
-                            <div class="shortcut-item">
-                                <kbd>Ctrl + F</kbd>
-                                <span>Rechercher</span>
-                            </div>
-                            <div class="shortcut-item">
-                                <kbd>Ctrl + K</kbd>
-                                <span>Afficher les raccourcis</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="shortcuts-group">
-                        <h4 class="font-semibold mb-2">Éditeur</h4>
-                        <div class="space-y-2">
-                            <div class="shortcut-item">
-                                <kbd>Ctrl + B</kbd>
-                                <span>Gras</span>
-                            </div>
-                            <div class="shortcut-item">
-                                <kbd>Ctrl + I</kbd>
-                                <span>Italique</span>
-                            </div>
-                            <div class="shortcut-item">
-                                <kbd>Ctrl + K</kbd>
-                                <span>Code</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de paramètres -->
-    <div id="settings-modal" class="modal hidden">
-        <div class="modal-overlay absolute inset-0 bg-black opacity-50"></div>
-        <div class="modal-container">
-            <div class="modal-content">
-                <h3 class="text-xl font-bold mb-4">Paramètres</h3>
-                <div class="space-y-6">
-                    <!-- Thème -->
-                    <div class="setting-group">
-                        <h4 class="font-semibold mb-2">Apparence</h4>
-                        <div class="flex items-center justify-between">
-                            <span>Thème sombre</span>
-                            <label class="switch">
-                                <input type="checkbox" id="dark-mode-toggle">
-                                <span class="slider round"></span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Pomodoro -->
-                    <div class="setting-group">
-                        <h4 class="font-semibold mb-2">Pomodoro</h4>
-                        <div class="space-y-2">
-                            <div class="flex items-center justify-between">
-                                <span>Durée de travail</span>
-                                <input type="number" id="work-duration" min="1" max="60" class="w-20 form-input">
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span>Durée de pause courte</span>
-                                <input type="number" id="short-break-duration" min="1" max="30" class="w-20 form-input">
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span>Durée de pause longue</span>
-                                <input type="number" id="long-break-duration" min="1" max="60" class="w-20 form-input">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Notifications -->
-                    <div class="setting-group">
-                        <h4 class="font-semibold mb-2">Notifications</h4>
-                        <div class="space-y-2">
-                            <div class="flex items-center justify-between">
-                                <span>Notifications sonores</span>
-                                <label class="switch">
-                                    <input type="checkbox" id="sound-notifications">
-                                    <span class="slider round"></span>
-                                </label>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span>Notifications push</span>
-                                <label class="switch">
-                                    <input type="checkbox" id="push-notifications">
-                                    <span class="slider round"></span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Sauvegarde -->
-                    <div class="setting-group">
-                        <h4 class="font-semibold mb-2">Données</h4>
-                        <div class="flex gap-2">
-                            <button id="export-data" class="btn btn-outline flex-1">Exporter</button>
-                            <label for="import-data" class="btn btn-outline flex-1 text-center cursor-pointer">
-                                Importer
-                                <input type="file" id="import-data" class="hidden" accept=".json">
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Notifications -->
-    <div id="notifications-container" class="fixed bottom-4 right-4 space-y-2 z-50">
-        <!-- Les notifications seront ajoutées ici -->
-    </div>
-
-    <!-- Scripts -->
     <script src="app.js"></script>
-    
-    <!-- Service Worker -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(registration => {
-                        console.log('ServiceWorker enregistré avec succès');
-                    })
-                    .catch(error => {
-                        console.error('Erreur d\'enregistrement du ServiceWorker:', error);
-                    });
-            });
-        }
-    </script>
 </body>
 </html>
